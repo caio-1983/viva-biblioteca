@@ -1,14 +1,14 @@
-import { Layout } from '@/components/layout/layout'
+'use client'
+
+import { useEffect } from 'react'
+import { usePageTitle } from '@/components/page-context'
 
 export default function SettingsPage() {
-  return (
-    <Layout>
-      <div>
-        <h1 className="text-3xl font-bold">Configurações</h1>
-        <p className="mt-4 text-muted-foreground">
-          Página de configurações em desenvolvimento...
-        </p>
-      </div>
-    </Layout>
-  )
+  const { setPageInfo } = usePageTitle()
+
+  useEffect(() => {
+    setPageInfo('Configurações', 'Gerenciar configurações do sistema')
+  }, [setPageInfo])
+
+  return <div />
 }

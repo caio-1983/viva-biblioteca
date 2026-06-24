@@ -9,15 +9,15 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   return (
-    <header className="border-b border-border bg-card">
-      <div className="flex h-16 items-center justify-between px-4 md:px-6 lg:px-8">
+    <header className="border-b border-border bg-white dark:bg-slate-900 shadow-sm">
+      <div className="flex h-20 items-center justify-between px-4 md:px-6 lg:px-8">
         {/* Left side - Menu button (mobile only) */}
         <div className="flex items-center gap-2 md:hidden">
           <Button
             variant="ghost"
             size="icon"
             onClick={onMenuClick}
-            className="h-9 w-9"
+            className="h-10 w-10 hover:bg-gray-100 dark:hover:bg-slate-800"
           >
             <Menu className="h-5 w-5" />
           </Button>
@@ -25,14 +25,16 @@ export function Header({ onMenuClick }: HeaderProps) {
 
         {/* Center/Right side - Title (mobile) / Actions (desktop) */}
         <div className="flex flex-1 items-center justify-between md:justify-end">
-          <h2 className="text-lg font-semibold md:hidden">Viva Biblioteca</h2>
+          <h2 className="text-lg font-bold bg-linear-to-r from-slate-900 to-slate-700 dark:from-slate-100 dark:to-slate-300 bg-clip-text text-transparent md:hidden">
+            Viva Biblioteca
+          </h2>
 
           {/* Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9"
+              className="h-10 w-10 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
             >
               <Bell className="h-5 w-5" />
               <span className="sr-only">Notificações</span>
@@ -40,7 +42,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9"
+              className="h-10 w-10 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
             >
               <Settings className="h-5 w-5" />
               <span className="sr-only">Configurações</span>

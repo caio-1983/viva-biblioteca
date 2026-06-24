@@ -24,23 +24,23 @@ export function StatCard({
   const Icon = Icons[icon as keyof typeof Icons]
 
   return (
-    <Card className="overflow-hidden border-0 bg-gradient-to-br from-card to-card/50 shadow-md transition-all hover:shadow-lg hover:scale-105 duration-300">
-      <div className="p-6">
+    <Card className="overflow-hidden border-0 bg-white dark:bg-slate-900 shadow-lg transition-all hover:shadow-2xl hover:scale-105 duration-300">
+      <div className="p-8">
         {/* Icon Background */}
-        <div className={cn('mb-4 inline-flex rounded-lg p-3', lightColor)}>
+        <div className={cn('mb-6 inline-flex rounded-full p-4', lightColor)}>
           {/* @ts-expect-error lucide-react dynamic icon */}
-          <Icon className={cn('h-6 w-6', textColor)} />
+          <Icon className={cn('h-7 w-7', textColor)} />
         </div>
 
         {/* Content */}
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-3xl font-bold text-foreground">{value.toLocaleString('pt-BR')}</p>
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{title}</p>
+          <p className="text-4xl font-bold text-foreground">{value.toLocaleString('pt-BR')}</p>
         </div>
 
         {/* Gradient Bottom Border */}
         <div className={cn(
-          'mt-4 h-1 w-12 rounded-full bg-gradient-to-r',
+          'mt-6 h-1.5 w-16 rounded-full bg-gradient-to-r',
           color
         )} />
       </div>

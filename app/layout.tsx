@@ -1,15 +1,18 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Inter, Poppins } from 'next/font/google'
+import { Providers } from '@/components/providers'
 import './globals.css'
 
-const geistSans = Geist({
+const inter = Inter({
   variable: '--font-sans',
   subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
 })
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const poppins = Poppins({
+  variable: '--font-display',
   subsets: ['latin'],
+  weight: ['600', '700', '800'],
 })
 
 export const metadata: Metadata = {
@@ -24,8 +27,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {children}
+      <body className={`${inter.variable} ${poppins.variable} antialiased`}>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

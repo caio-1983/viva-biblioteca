@@ -20,73 +20,75 @@ const actionCards: ActionCard[] = [
     description: 'Registrar um novo empréstimo',
     icon: 'BookMarked',
     href: '/loans/new',
-    color: 'text-blue-500',
-    bgColor: 'bg-blue-100 dark:bg-blue-950',
+    color: 'text-white',
+    bgColor: 'bg-linear-to-br from-blue-500 to-blue-600',
   },
   {
     title: 'Devoluções',
     description: 'Registrar a devolução de livros',
     icon: 'RotateCcw',
     href: '/returns',
-    color: 'text-green-500',
-    bgColor: 'bg-green-100 dark:bg-green-950',
+    color: 'text-white',
+    bgColor: 'bg-linear-to-br from-green-500 to-green-600',
   },
   {
     title: 'Acervo',
     description: 'Consultar livros disponíveis',
     icon: 'BookOpen',
     href: '/books',
-    color: 'text-purple-500',
-    bgColor: 'bg-purple-100 dark:bg-purple-950',
+    color: 'text-white',
+    bgColor: 'bg-linear-to-br from-purple-500 to-purple-600',
   },
   {
     title: 'Membros',
     description: 'Cadastrar e consultar membros',
     icon: 'Users',
     href: '/members',
-    color: 'text-orange-500',
-    bgColor: 'bg-orange-100 dark:bg-orange-950',
+    color: 'text-white',
+    bgColor: 'bg-linear-to-br from-orange-500 to-orange-600',
   },
   {
     title: 'Relatórios',
     description: 'Visualizar relatórios e estatísticas',
     icon: 'BarChart3',
     href: '/reports',
-    color: 'text-cyan-500',
-    bgColor: 'bg-cyan-100 dark:bg-cyan-950',
+    color: 'text-white',
+    bgColor: 'bg-linear-to-br from-cyan-500 to-cyan-600',
   },
   {
     title: 'Configurações',
     description: 'Configurar o sistema',
     icon: 'Cog',
     href: '/settings',
-    color: 'text-gray-500',
-    bgColor: 'bg-gray-100 dark:bg-gray-950',
+    color: 'text-white',
+    bgColor: 'bg-linear-to-br from-slate-600 to-slate-700',
   },
 ]
 
 export function ActionCards() {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {actionCards.map((card) => {
         const Icon = Icons[card.icon as keyof typeof Icons]
 
         return (
           <Link key={card.href} href={card.href}>
-            <Card className="group cursor-pointer overflow-hidden border-0 transition-all hover:shadow-lg hover:scale-105 duration-300 h-full">
-              <div className="p-8">
-                <div className={cn('mb-4 inline-flex rounded-lg p-4', card.bgColor)}>
+            <Card className="group relative cursor-pointer overflow-hidden border-0 transition-all hover:shadow-2xl hover:scale-105 duration-300 h-full bg-white dark:bg-slate-900">
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 bg-white" />
+              <div className="p-8 relative z-10">
+                <div className={cn('mb-6 inline-flex rounded-full p-5', card.bgColor)}>
                   {/* @ts-expect-error lucide-react dynamic icon */}
-                  <Icon className={cn('h-8 w-8', card.color)} />
+                  <Icon className={cn('h-10 w-10', card.color)} />
                 </div>
 
-                <h3 className="text-lg font-semibold text-foreground">
+                <h3 className="text-foreground">
                   {card.title}
                 </h3>
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
                   {card.description}
                 </p>
               </div>
+              <div className={cn('absolute -right-16 -bottom-16 h-32 w-32 rounded-full opacity-0 group-hover:opacity-5 transition-opacity duration-300', card.bgColor)} />
             </Card>
           </Link>
         )

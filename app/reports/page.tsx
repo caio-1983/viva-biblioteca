@@ -1,14 +1,14 @@
-import { Layout } from '@/components/layout/layout'
+'use client'
+
+import { useEffect } from 'react'
+import { usePageTitle } from '@/components/page-context'
 
 export default function ReportsPage() {
-  return (
-    <Layout>
-      <div>
-        <h1 className="text-3xl font-bold">Relatórios</h1>
-        <p className="mt-4 text-muted-foreground">
-          Visualizar relatórios e estatísticas em desenvolvimento...
-        </p>
-      </div>
-    </Layout>
-  )
+  const { setPageInfo } = usePageTitle()
+
+  useEffect(() => {
+    setPageInfo('Relatórios', 'Visualizar relatórios e estatísticas')
+  }, [setPageInfo])
+
+  return <div />
 }

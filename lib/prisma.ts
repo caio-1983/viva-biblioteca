@@ -1,28 +1,27 @@
 import { PrismaClient } from '@prisma/client'
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
 
 let prismaInstance: PrismaClient | null = null
 
 export function getPrisma(): PrismaClient {
-  if (prismaInstance) {
-    return prismaInstance
-  }
+  if (prismaInstance) return prismaInstance
 
   if (typeof window !== 'undefined') {
     throw new Error('Cannot use Prisma in browser')
   }
 
-  prismaInstance = new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['warn'] : [],
-  })
+  const url = process.env.DATABASE_URL ?? 'file:./storage/database/biblioteca.db'
+  const adapter = new PrismaBetterSqlite3({ url })
+
+  prismaInstance = new PrismaClient({ adapter })
   return prismaInstance
 }
 
 export const prisma = new Proxy(
   {},
   {
-    get: (target, prop) => {
-      const client = getPrisma()
-      return Reflect.get(client, prop)
+    get: (_target, prop) => {
+      return Reflect.get(getPrisma(), prop)
     },
   }
 ) as unknown as PrismaClient

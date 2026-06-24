@@ -1,17 +1,19 @@
-import { Layout } from '@/components/layout/layout'
+'use client'
+
+import { useEffect } from 'react'
+import { usePageTitle } from '@/components/page-context'
 import { NewLoanForm } from '@/components/loans/new-loan-form'
 
 export default function NewLoanPage() {
-  return (
-    <Layout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Novo Empréstimo</h1>
-          <p className="mt-2 text-muted-foreground">Registrar um novo empréstimo de livro</p>
-        </div>
+  const { setPageInfo } = usePageTitle()
 
-        <NewLoanForm />
-      </div>
-    </Layout>
+  useEffect(() => {
+    setPageInfo('Novo Empréstimo', 'Registrar um novo empréstimo de livro')
+  }, [setPageInfo])
+
+  return (
+    <div className="space-y-8">
+      <NewLoanForm />
+    </div>
   )
 }

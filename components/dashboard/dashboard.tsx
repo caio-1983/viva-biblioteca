@@ -5,23 +5,26 @@ import { ActionCards } from './action-cards'
 
 export function Dashboard() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+      <div className="pt-4">
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground bg-linear-to-r from-slate-900 to-slate-700 dark:from-slate-100 dark:to-slate-300 bg-clip-text text-transparent">
           Bem-vindo!
         </h1>
-        <p className="mt-2 text-muted-foreground">
+        <p className="mt-3 text-lg text-muted-foreground font-medium">
           Sistema de Gerenciamento da Biblioteca
         </p>
       </div>
 
       {/* Action Cards */}
-      <ActionCards />
+      <div>
+        <h2 className="mb-6 text-foreground">Módulos Principais</h2>
+        <ActionCards />
+      </div>
 
       {/* Stats Summary */}
       <div>
-        <h2 className="mb-4 text-xl font-semibold text-foreground">Resumo</h2>
+        <h2 className="mb-6 text-foreground">Resumo Geral</h2>
         <StatsCards />
       </div>
     </div>
