@@ -69,13 +69,15 @@ export function ActionCards() {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {actionCards.map((card) => {
-        const Icon = Icons[card.icon as keyof typeof Icons] as React.ComponentType<any>
+        // @ts-ignore - lucide-react dynamic icon selection
+        const Icon = Icons[card.icon as keyof typeof Icons]
 
         return (
           <Link key={card.href} href={card.href}>
             <Card className="group cursor-pointer overflow-hidden border-0 transition-all hover:shadow-lg hover:scale-105 duration-300 h-full">
               <div className="p-8">
                 <div className={cn('mb-4 inline-flex rounded-lg p-4', card.bgColor)}>
+                  {/* @ts-ignore */}
                   <Icon className={cn('h-8 w-8', card.color)} />
                 </div>
 

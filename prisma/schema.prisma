@@ -6,39 +6,83 @@ datasource db {
   provider = "sqlite"
 }
 
-model Livro {
-  id                   Int    @id @default(autoincrement())
-  codigo               String @unique
-  titulo               String
-  autor                String?
-  categoria            String?
+// ============================================
+// ACERVO - Exemplares de Livros
+// ============================================
+model Acervo {
+  id                  Int     @id @default(autoincrement())
+  numeroExemplar      String  @unique
+  tipoPublicacao      String?
+  isbn                String?
+  classificacao       String?
+  titulo              String
+  subtitulo           String?
+  autor               String?
+  edicao              String?
+  editora             String?
+  dataPublicacao      DateTime?
+  tombo               String?
+  assunto1            String?
+  assunto2            String?
+  assunto3            String?
+  colecao             String?
+  observacao          String?
+  status              String  @default("DISPONIVEL")
+  ativo               Boolean @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  quantidadeTotal      Int @default(1)
-  quantidadeDisponivel Int @default(1)
-
-  emprestimos Emprestimo[]
+  emprestimos         Emprestimo[]
 }
 
-model Membro {
-  id              Int @id @default(autoincrement())
-  nome            String
-  dataNascimento  DateTime?
-  telefone        String?
-  observacoes     String?
+// ============================================
+// USUARIO - Membros da Biblioteca
+// ============================================
+model Usuario {
+  id                  Int     @id @default(autoincrement())
+  numeroCadastro      String  @unique
+  nomeCompleto        String
+  cpf                 String?
+  dataNascimento      DateTime?
+  celular             String?
+  email               String?
+  membro              Boolean @default(true)
+  ativo               Boolean @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  emprestimos Emprestimo[]
+  emprestimos         Emprestimo[]
 }
 
+// ============================================
+// EMPRESTIMO - Histórico de Circulação
+// ============================================
 model Emprestimo {
-  id Int @id @default(autoincrement())
+  id                      Int     @id @default(autoincrement())
+  usuarioId               Int
+  acervoId                Int
+  dataEmprestimo          DateTime @default(now())
+  dataPrevistaDevolucao   DateTime
+  dataDevolucao           DateTime?
+  status                  String  @default("ATIVO")
+  createdAt               DateTime @default(now())
 
-  livroId  Int
-  membroId Int
+  usuario                 Usuario @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  acervo                  Acervo  @relation(fields: [acervoId], references: [id], onDelete: Restrict)
 
-  dataEmprestimo DateTime @default(now())
-  dataPrevista   DateTime
-  dataDevolucao  DateTime?
+  @@index([usuarioId])
+  @@index([acervoId])
+  @@index([dataEmprestimo])
+}
 
-  livro  Livro  @relation(fields: [livroId], references: [id])
-  membro Membro @relation(fields: [membroId], references: [id])
+// ============================================
+// CONFIGURACAO - Parâmetros do Sistema
+// ============================================
+model Configuracao {
+  id                      Int     @id @default(autoincrement())
+  prazoEmprestimoDias     Int     @default(14)
+  maxEmprestimos          Int     @default(3)
+  pastaBackup             String?
+  pastaExportacao         String?
+  updatedAt               DateTime @updatedAt
 } 

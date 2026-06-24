@@ -21,13 +21,15 @@ export function StatCard({
   lightColor,
   textColor,
 }: StatCardProps) {
-  const Icon = Icons[icon as keyof typeof Icons] as React.ComponentType<any>
+  // @ts-ignore - lucide-react dynamic icon selection
+  const Icon = Icons[icon as keyof typeof Icons]
 
   return (
     <Card className="overflow-hidden border-0 bg-gradient-to-br from-card to-card/50 shadow-md transition-all hover:shadow-lg hover:scale-105 duration-300">
       <div className="p-6">
         {/* Icon Background */}
         <div className={cn('mb-4 inline-flex rounded-lg p-3', lightColor)}>
+          {/* @ts-ignore */}
           <Icon className={cn('h-6 w-6', textColor)} />
         </div>
 
