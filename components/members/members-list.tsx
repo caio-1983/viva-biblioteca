@@ -1,10 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { LoanHistoryModal } from '@/components/members/loan-history-modal'
+import { QuickReturnModal } from '@/components/members/quick-return-modal'
 import {
   Search,
   Plus,
@@ -18,6 +21,7 @@ import {
   UserCheck,
   UserX,
   MoreHorizontal,
+  RotateCcw,
 } from 'lucide-react'
 
 interface Usuario {
@@ -75,6 +79,8 @@ export function MembersList({ refreshTrigger, onNewUser }: MembersListProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState<Filter>('todos')
   const [openDropdown, setOpenDropdown] = useState<number | null>(null)
+  const [historyModal, setHistoryModal] = useState<{ id: number; nome: string; cadastro: string } | null>(null)
+  const [returnModal, setReturnModal] = useState<{ id: number; nome: string; cadastro: string } | null>(null)
 
   const loadUsuarios = async () => {
     try {
@@ -134,6 +140,22 @@ export function MembersList({ refreshTrigger, onNewUser }: MembersListProps) {
 
   return (
     <div className="space-y-6">
+      {historyModal && (
+        <LoanHistoryModal
+          userId={historyModal.id}
+          userName={historyModal.nome}
+          numeroCadastro={historyModal.cadastro}
+          onClose={() => setHistoryModal(null)}
+        />
+      )}
+      {returnModal && (
+        <QuickReturnModal
+          userId={returnModal.id}
+          userName={returnModal.nome}
+          numeroCadastro={returnModal.cadastro}
+          onClose={() => setReturnModal(null)}
+        />
+      )}
 
       {/* ── Header ───────────────────────────────────────── */}
       <div className="flex items-center justify-between">
@@ -323,19 +345,36 @@ export function MembersList({ refreshTrigger, onNewUser }: MembersListProps) {
                     <div className="mx-4 border-t border-border/60" />
 
                     {/* Footer actions */}
-                    <div className="flex items-center gap-1 px-3 py-2">
+                    <div className="flex items-center px-2 py-1.5">
                       <Button
+                        asChild
                         variant="ghost"
                         size="sm"
-                        className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+                        className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20"
                       >
-                        <Edit2 className="h-3.5 w-3.5" />
-                        Editar
+                        <Link
+                          href={`/loans/new?userId=${usuario.id}&nome=${encodeURIComponent(usuario.nomeCompleto)}&cadastro=${encodeURIComponent(usuario.numeroCadastro)}`}
+                        >
+                          <BookOpen className="h-3.5 w-3.5" />
+                          Empréstimo
+                        </Link>
+                      </Button>
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-green-600 hover:bg-green-50 dark:hover:text-green-400 dark:hover:bg-green-900/20"
+                      >
+                        <Link href={`/returns?userId=${usuario.id}&nome=${encodeURIComponent(usuario.nomeCompleto)}&cadastro=${encodeURIComponent(usuario.numeroCadastro)}`}>
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          Devolução
+                        </Link>
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => setHistoryModal({ id: usuario.id, nome: usuario.nomeCompleto, cadastro: usuario.numeroCadastro })}
                       >
                         <History className="h-3.5 w-3.5" />
                         Histórico
@@ -368,7 +407,13 @@ export function MembersList({ refreshTrigger, onNewUser }: MembersListProps) {
                               <Edit2 className="h-3.5 w-3.5" />
                               Editar
                             </button>
-                            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-accent transition-colors">
+                            <button
+                              onClick={() => {
+                                setOpenDropdown(null)
+                                setHistoryModal({ id: usuario.id, nome: usuario.nomeCompleto, cadastro: usuario.numeroCadastro })
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-accent transition-colors"
+                            >
                               <History className="h-3.5 w-3.5" />
                               Ver Detalhes
                             </button>

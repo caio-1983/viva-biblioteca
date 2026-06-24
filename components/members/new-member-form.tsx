@@ -67,8 +67,22 @@ export function NewMemberForm({ onSuccess, onCancel }: NewMemberFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError(null)
+
+    if (!formData.nomeCompleto.trim()) {
+      setError('Nome Completo é obrigatório.')
+      return
+    }
+    if (!formData.dataNascimento) {
+      setError('Data de Nascimento é obrigatória.')
+      return
+    }
+    if (!formData.celular.trim()) {
+      setError('Celular é obrigatório.')
+      return
+    }
+
+    setLoading(true)
 
     try {
       const response = await fetch('/api/usuarios', {
@@ -143,7 +157,7 @@ export function NewMemberForm({ onSuccess, onCancel }: NewMemberFormProps) {
               disabled={loading}
               onClick={handleReset}
             >
-              Limpar
+              {onCancel ? 'Cancelar' : 'Limpar'}
             </Button>
             <Button
               type="submit"
@@ -205,7 +219,8 @@ export function NewMemberForm({ onSuccess, onCancel }: NewMemberFormProps) {
                   htmlFor="dataNascimento"
                   className="text-sm font-medium text-foreground"
                 >
-                  Data de Nascimento
+                  Data de Nascimento{' '}
+                  <span className="text-red-500" aria-label="obrigatório">*</span>
                 </label>
                 <Input
                   id="dataNascimento"
@@ -213,48 +228,34 @@ export function NewMemberForm({ onSuccess, onCancel }: NewMemberFormProps) {
                   type="date"
                   value={formData.dataNascimento}
                   onChange={handleChange}
+                  required
                   disabled={loading}
                 />
               </div>
 
-              {/* Tipo de Cadastro — segmented control */}
-              <div className="space-y-2">
+              {/* Tipo de Cadastro */}
+              <div className="space-y-1.5">
                 <span className="text-sm font-medium text-foreground">
                   Tipo de Cadastro
                 </span>
-                <div className="flex rounded-lg border border-border bg-muted/30 p-1 gap-1">
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() =>
-                      setFormData((p) => ({ ...p, membro: true }))
-                    }
-                    className={cn(
-                      'flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      formData.membro
-                        ? 'bg-white text-foreground shadow-sm dark:bg-slate-800'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                    aria-pressed={formData.membro}
-                  >
-                    Membro
-                  </button>
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() =>
-                      setFormData((p) => ({ ...p, membro: false }))
-                    }
-                    className={cn(
-                      'flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      !formData.membro
-                        ? 'bg-white text-foreground shadow-sm dark:bg-slate-800'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                    aria-pressed={!formData.membro}
-                  >
-                    Não Membro
-                  </button>
+                <div className="flex flex-wrap gap-1.5">
+                  {([{ label: 'Membro', value: true }, { label: 'Não Membro', value: false }] as const).map(({ label, value }) => (
+                    <button
+                      key={label}
+                      type="button"
+                      disabled={loading}
+                      onClick={() => setFormData((p) => ({ ...p, membro: value }))}
+                      className={cn(
+                        'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring whitespace-nowrap',
+                        formData.membro === value
+                          ? 'border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/30 dark:text-blue-300'
+                          : 'border-border bg-background text-muted-foreground hover:border-blue-300 hover:text-foreground'
+                      )}
+                      aria-pressed={formData.membro === value}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </div>
             </CardContent>
@@ -283,7 +284,8 @@ export function NewMemberForm({ onSuccess, onCancel }: NewMemberFormProps) {
                   htmlFor="celular"
                   className="text-sm font-medium text-foreground"
                 >
-                  Celular
+                  Celular{' '}
+                  <span className="text-red-500" aria-label="obrigatório">*</span>
                 </label>
                 <Input
                   id="celular"
@@ -291,6 +293,7 @@ export function NewMemberForm({ onSuccess, onCancel }: NewMemberFormProps) {
                   value={formData.celular}
                   onChange={handleChange}
                   placeholder="(11) 99999-1234"
+                  required
                   disabled={loading}
                   autoComplete="tel"
                 />

@@ -1,184 +1,442 @@
 'use client'
 
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import {
+  Search,
+  RotateCcw,
+  BookOpen,
+  User,
+  CalendarDays,
+  AlertTriangle,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  ArrowLeft,
+} from 'lucide-react'
 
-const mockLoans = [
-  {
-    id: 1,
-    memberName: 'João da Silva',
-    bookTitle: 'O Peregrino',
-    loanDate: '2026-06-23',
-    dueDate: '2026-07-23',
-    status: 'active',
-  },
-  {
-    id: 2,
-    memberName: 'Maria Santos',
-    bookTitle: 'Clean Code',
-    loanDate: '2026-05-15',
-    dueDate: '2026-06-15',
-    status: 'overdue',
-  },
-]
+interface EmprestimoAtivo {
+  emprestimoId: number
+  acervoId: number
+  numeroExemplar: string
+  titulo: string
+  autor?: string | null
+  usuarioId: number
+  nomeCompleto: string
+  numeroCadastro: string
+  dataEmprestimo: string
+  dataPrevistaDevolucao: string
+}
 
-export function ReturnsForm() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedLoan, setSelectedLoan] = useState<(typeof mockLoans)[0] | null>(null)
-  const [returnDate, setReturnDate] = useState(new Date().toISOString().split('T')[0])
+// Empréstimo como retornado pelo endpoint /api/usuarios/[id]/emprestimos
+interface EmprestimoUsuario {
+  id: number
+  dataEmprestimo: string
+  dataPrevistaDevolucao: string
+  dataDevolucao: string | null
+  status: string
+  titulo: string
+  autor: string | null
+  numeroExemplar: string
+}
 
-  const filteredLoans = mockLoans.filter(
-    (loan) =>
-      loan.memberName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      loan.bookTitle.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+function formatDate(str: string): string {
+  return new Date(str + (str.includes('T') ? '' : 'T12:00:00'))
+    .toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+}
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (selectedLoan) {
-      console.log('Devolução registrada:', { loanId: selectedLoan.id, returnDate })
-      setSelectedLoan(null)
-      setSearchTerm('')
+function calcDiasAtraso(dataPrevista: string): number {
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+  const prevista = new Date(dataPrevista + 'T12:00:00')
+  return Math.max(0, Math.ceil((hoje.getTime() - prevista.getTime()) / 86_400_000))
+}
+
+// ─── Modo usuário: lista de empréstimos ativos ────────────────────────────────
+
+function UserLoansView({
+  userId,
+  userName,
+  numeroCadastro,
+  onBack,
+}: {
+  userId: number
+  userName: string
+  numeroCadastro: string
+  onBack: () => void
+}) {
+  const [emprestimos, setEmprestimos] = useState<EmprestimoUsuario[]>([])
+  const [loading, setLoading] = useState(true)
+  const [returning, setReturning] = useState<number | null>(null)
+  const [returned, setReturned] = useState<Set<number>>(new Set())
+  const [error, setError] = useState<string | null>(null)
+
+  const loadEmprestimos = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/usuarios/${userId}/emprestimos`)
+      const data: EmprestimoUsuario[] = await res.json()
+      setEmprestimos(Array.isArray(data) ? data.filter((e) => e.status === 'ATIVO') : [])
+    } catch {
+      setEmprestimos([])
+    } finally {
+      setLoading(false)
+    }
+  }, [userId])
+
+  useEffect(() => { loadEmprestimos() }, [loadEmprestimos])
+
+  const handleDevolver = async (e: EmprestimoUsuario) => {
+    setReturning(e.id)
+    setError(null)
+    try {
+      // Busca o acervoId pelo numeroExemplar
+      const booksRes = await fetch('/api/books')
+      const books: { id: number; numeroExemplar: string }[] = await booksRes.json()
+      const book = books.find((b) => b.numeroExemplar === e.numeroExemplar)
+
+      const res = await fetch('/api/returns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emprestimoId: e.id, acervoId: book?.id }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error ?? 'Erro ao registrar devolução')
+      }
+
+      setReturned((prev) => new Set([...prev, e.id]))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro desconhecido')
+    } finally {
+      setReturning(null)
     }
   }
 
+  const ativos = emprestimos.filter((e) => !returned.has(e.id))
+
   return (
     <div className="space-y-6">
-      {/* Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Pesquisar Empréstimo</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Pesquisar por membro ou livro"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* List of Loans */}
-      {filteredLoans.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Empréstimos Encontrados</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b border-border">
-                  <tr>
-                    <th className="text-left py-2 px-3 font-semibold">Membro</th>
-                    <th className="text-left py-2 px-3 font-semibold">Livro</th>
-                    <th className="text-left py-2 px-3 font-semibold">Data Empréstimo</th>
-                    <th className="text-left py-2 px-3 font-semibold">Data Devolução Prevista</th>
-                    <th className="text-left py-2 px-3 font-semibold">Status</th>
-                    <th className="text-left py-2 px-3 font-semibold">Ação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLoans.map((loan) => (
-                    <tr key={loan.id} className="border-b border-border hover:bg-muted/50">
-                      <td className="py-3 px-3">{loan.memberName}</td>
-                      <td className="py-3 px-3">{loan.bookTitle}</td>
-                      <td className="py-3 px-3">{loan.loanDate}</td>
-                      <td className="py-3 px-3">{loan.dueDate}</td>
-                      <td className="py-3 px-3">
-                        <Badge
-                          className={cn(
-                            loan.status === 'overdue'
-                              ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200'
-                              : 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200'
-                          )}
-                        >
-                          {loan.status === 'overdue' ? 'Atrasado' : 'Ativo'}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-3">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedLoan(loan)}
-                        >
-                          Devolver
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Header do usuário */}
+      <div className="flex items-center gap-4">
+        <button
+          onClick={onBack}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          aria-label="Voltar"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-50 dark:bg-green-900/20">
+          <User className="h-5 w-5 text-green-600 dark:text-green-400" />
+        </div>
+        <div className="flex-1">
+          <h2 className="text-xl font-semibold text-foreground">{userName}</h2>
+          <p className="font-mono text-sm text-muted-foreground">{numeroCadastro}</p>
+        </div>
+        <div className="text-right text-sm text-muted-foreground">
+          <p><span className="font-semibold text-foreground">{ativos.length}</span> pendente{ativos.length !== 1 ? 's' : ''}</p>
+          {returned.size > 0 && (
+            <p className="text-green-600 dark:text-green-400">
+              <span className="font-semibold">{returned.size}</span> devolvido{returned.size !== 1 ? 's' : ''} agora
+            </p>
+          )}
+        </div>
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800/50 dark:bg-red-900/20 dark:text-red-400">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>{error}</p>
+        </div>
       )}
 
-      {/* Return Form */}
-      {selectedLoan && (
-        <Card className="border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950/20">
-          <CardHeader>
-            <CardTitle className="text-green-700 dark:text-green-300">
-              Registrar Devolução
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Membro:</p>
-                <p className="font-semibold">{selectedLoan.memberName}</p>
+      {loading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="h-24 animate-pulse rounded-xl bg-muted/40" />
+          ))}
+        </div>
+      ) : emprestimos.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center">
+          <BookOpen className="mb-3 h-10 w-10 text-muted-foreground/30" />
+          <p className="text-sm font-medium text-muted-foreground">Nenhum empréstimo ativo</p>
+          <p className="mt-1 text-xs text-muted-foreground/60">Este usuário não possui livros para devolver</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* Devolvidos nesta sessão */}
+          {emprestimos.filter((e) => returned.has(e.id)).map((e) => (
+            <div key={e.id} className="flex items-center gap-4 rounded-xl border border-green-200 bg-green-50 px-5 py-4 dark:border-green-800/50 dark:bg-green-900/20">
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-green-700 dark:text-green-300">{e.titulo}</p>
+                <p className="font-mono text-xs text-green-600/70 dark:text-green-400/60">{e.numeroExemplar} · Devolvido · exemplar agora DISPONÍVEL</p>
               </div>
+            </div>
+          ))}
 
-              <div>
-                <p className="text-sm text-muted-foreground">Livro:</p>
-                <p className="font-semibold">{selectedLoan.bookTitle}</p>
-              </div>
+          {/* Ativos */}
+          {ativos.map((e) => {
+            const diasAtraso = calcDiasAtraso(e.dataPrevistaDevolucao)
+            const atrasado = diasAtraso > 0
+            const isReturning = returning === e.id
 
-              <div>
-                <label className="text-sm font-medium text-foreground">
-                  Data de Devolução
-                </label>
-                <Input
-                  type="date"
-                  value={returnDate}
-                  onChange={(e) => setReturnDate(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700">
-                  Confirmar Devolução
-                </Button>
+            return (
+              <div
+                key={e.id}
+                className={cn(
+                  'flex items-center gap-4 rounded-xl border px-5 py-4',
+                  atrasado
+                    ? 'border-red-200 bg-red-50/40 dark:border-red-800/50 dark:bg-red-900/10'
+                    : 'border-border bg-card'
+                )}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate font-semibold text-foreground">{e.titulo}</p>
+                    <span className={cn(
+                      'shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
+                      atrasado
+                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                        : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                    )}>
+                      {atrasado
+                        ? <><AlertTriangle className="h-3 w-3" />{diasAtraso} dia{diasAtraso !== 1 ? 's' : ''} de atraso</>
+                        : <><Clock className="h-3 w-3" />No prazo</>
+                      }
+                    </span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                    <span className="font-mono">{e.numeroExemplar}</span>
+                    <span>Empréstimo: {formatDate(e.dataEmprestimo)}</span>
+                    <span>Previsto: {formatDate(e.dataPrevistaDevolucao)}</span>
+                  </div>
+                </div>
                 <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setSelectedLoan(null)}
+                  size="sm"
+                  disabled={isReturning}
+                  onClick={() => handleDevolver(e)}
+                  className="shrink-0 gap-1.5 bg-green-600 text-white hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
                 >
-                  Cancelar
+                  <RotateCcw className={cn('h-3.5 w-3.5', isReturning && 'animate-spin')} />
+                  {isReturning ? 'Devolvendo...' : 'Devolver'}
                 </Button>
               </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Success Message */}
-      {!selectedLoan && searchTerm === '' && (
-        <Card className="border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950/20">
-          <CardContent className="pt-6 flex items-center gap-2 text-green-700 dark:text-green-300">
-            <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center text-white text-sm">
-              ✓
-            </div>
-            <p className="font-medium">Devolução registrada com sucesso! Obrigado!</p>
-          </CardContent>
-        </Card>
+            )
+          })}
+        </div>
       )}
     </div>
   )
+}
+
+// ─── Modo busca por exemplar ──────────────────────────────────────────────────
+
+function ExemplarSearchView() {
+  const [exemplar, setExemplar] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [emprestimo, setEmprestimo] = useState<EmprestimoAtivo | null>(null)
+  const [notFound, setNotFound] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState<{ titulo: string; exemplar: string } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleSearch = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    const q = exemplar.trim().toUpperCase()
+    if (!q) return
+    setSearching(true)
+    setEmprestimo(null)
+    setNotFound(false)
+    setError(null)
+    setSuccess(null)
+    try {
+      const res = await fetch(`/api/returns?exemplar=${encodeURIComponent(q)}`)
+      if (res.status === 404) { setNotFound(true); return }
+      if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Erro'); return }
+      setEmprestimo(await res.json())
+    } catch { setError('Erro de conexão') }
+    finally { setSearching(false) }
+  }
+
+  const handleDevolver = async () => {
+    if (!emprestimo) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/returns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emprestimoId: emprestimo.emprestimoId, acervoId: emprestimo.acervoId }),
+      })
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? 'Erro') }
+      setSuccess({ titulo: emprestimo.titulo, exemplar: emprestimo.numeroExemplar })
+      setEmprestimo(null)
+      setExemplar('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro desconhecido')
+    } finally { setLoading(false) }
+  }
+
+  const diasAtraso = emprestimo ? calcDiasAtraso(emprestimo.dataPrevistaDevolucao) : 0
+  const atrasado = diasAtraso > 0
+
+  return (
+    <div className="space-y-6">
+      {/* Busca */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/20">
+              <Search className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-semibold">Buscar Exemplar</CardTitle>
+              <CardDescription>Digite o número do exemplar para localizar o empréstimo ativo</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSearch} className="flex gap-2">
+            <div className="relative flex-1">
+              <BookOpen className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <Input
+                ref={inputRef}
+                className="pl-9 font-mono uppercase"
+                placeholder="EX000001"
+                value={exemplar}
+                onChange={(e) => { setExemplar(e.target.value); setNotFound(false); setEmprestimo(null); setError(null); setSuccess(null) }}
+                disabled={searching || loading}
+                autoFocus
+              />
+            </div>
+            <Button type="submit" disabled={searching || !exemplar.trim()} className="gap-2 bg-green-600 text-white hover:bg-green-700">
+              <Search className="h-4 w-4" />
+              {searching ? 'Buscando...' : 'Buscar'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {error && (
+        <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800/50 dark:bg-red-900/20 dark:text-red-400">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><p>{error}</p>
+        </div>
+      )}
+
+      {notFound && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-800/50 dark:bg-amber-900/20 dark:text-amber-300">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>Nenhum empréstimo ativo para <span className="font-mono font-semibold">{exemplar.toUpperCase()}</span>.</p>
+        </div>
+      )}
+
+      {success && (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-green-200 bg-green-50 py-12 text-center dark:border-green-800/50 dark:bg-green-900/20">
+          <CheckCircle2 className="mb-3 h-10 w-10 text-green-600 dark:text-green-400" />
+          <p className="text-base font-semibold text-green-700 dark:text-green-300">Devolução registrada com sucesso!</p>
+          <p className="mt-1 text-sm text-green-600/80">{success.titulo} · <span className="font-mono text-xs">{success.exemplar}</span></p>
+          <Button className="mt-6 gap-2 bg-green-600 text-white hover:bg-green-700" onClick={() => { setSuccess(null); setTimeout(() => inputRef.current?.focus(), 50) }}>
+            <RotateCcw className="h-4 w-4" />Nova Devolução
+          </Button>
+        </div>
+      )}
+
+      {emprestimo && (
+        <>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/20">
+                    <BookOpen className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div><CardTitle className="text-base font-semibold">Exemplar</CardTitle><CardDescription>Dados do livro</CardDescription></div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div><p className="text-xs text-muted-foreground">Número</p><p className="font-mono font-semibold">{emprestimo.numeroExemplar}</p></div>
+                <div><p className="text-xs text-muted-foreground">Título</p><p className="font-semibold leading-snug">{emprestimo.titulo}</p></div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                    <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div><CardTitle className="text-base font-semibold">Usuário</CardTitle><CardDescription>Quem está devolvendo</CardDescription></div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div><p className="text-xs text-muted-foreground">Nome</p><p className="font-semibold leading-snug">{emprestimo.nomeCompleto}</p></div>
+                <div><p className="text-xs text-muted-foreground">Nº Cadastro</p><p className="font-mono font-semibold">{emprestimo.numeroCadastro}</p></div>
+              </CardContent>
+            </Card>
+
+            <Card className={cn('md:col-span-2 xl:col-span-1', atrasado && 'border-red-300 dark:border-red-800')}>
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', atrasado ? 'bg-red-50 dark:bg-red-900/20' : 'bg-violet-50 dark:bg-violet-900/20')}>
+                    <CalendarDays className={cn('h-4 w-4', atrasado ? 'text-red-600 dark:text-red-400' : 'text-violet-600 dark:text-violet-400')} />
+                  </div>
+                  <div><CardTitle className="text-base font-semibold">Datas</CardTitle><CardDescription>Período do empréstimo</CardDescription></div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div><p className="text-xs text-muted-foreground">Data do Empréstimo</p><p className="font-semibold">{formatDate(emprestimo.dataEmprestimo)}</p></div>
+                <div><p className="text-xs text-muted-foreground">Devolução Prevista</p><p className="font-semibold">{formatDate(emprestimo.dataPrevistaDevolucao)}</p></div>
+                <div className={cn('flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium', atrasado ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300' : 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300')}>
+                  {atrasado ? <AlertTriangle className="h-4 w-4 shrink-0" /> : <Clock className="h-4 w-4 shrink-0" />}
+                  {atrasado ? <span><span className="font-bold">{diasAtraso} dia{diasAtraso !== 1 ? 's' : ''}</span> de atraso</span> : <span>No prazo</span>}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 rounded-xl border border-border bg-muted/20 px-6 py-4">
+            <p className="flex-1 text-sm text-muted-foreground">
+              Confirme a devolução de <span className="font-mono font-semibold text-foreground">{emprestimo.numeroExemplar}</span>. O status será alterado para <span className="font-semibold text-green-600">DISPONÍVEL</span>.
+            </p>
+            <Button onClick={handleDevolver} disabled={loading} className="gap-2 bg-green-600 text-white hover:bg-green-700">
+              <RotateCcw className="h-4 w-4" />
+              {loading ? 'Registrando...' : 'Registrar Devolução'}
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ─── Componente raiz ──────────────────────────────────────────────────────────
+
+export function ReturnsForm() {
+  const router = useRouter()
+  const params = useSearchParams()
+
+  const userId = params.get('userId')
+  const nome   = params.get('nome') ?? ''
+  const cadastro = params.get('cadastro') ?? ''
+
+  if (userId) {
+    return (
+      <UserLoansView
+        userId={Number(userId)}
+        userName={nome}
+        numeroCadastro={cadastro}
+        onBack={() => router.back()}
+      />
+    )
+  }
+
+  return <ExemplarSearchView />
 }

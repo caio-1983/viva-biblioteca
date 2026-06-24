@@ -67,7 +67,7 @@ export function SidebarModern({ open, onClose }: SidebarProps) {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex md:flex-col fixed left-0 top-0 h-screen w-60 bg-gradient-to-b from-slate-900 via-blue-900 to-slate-900 border-r border-slate-700">
         {/* Logo Section */}
-        <div className="flex items-center justify-center border-b border-slate-700/50 px-4 py-6">
+        <div className="flex items-center justify-center border-b border-slate-200 px-4 py-6 bg-white">
           <Image
             src="/logo-biblioteca.png"
             alt="Viva Biblioteca"

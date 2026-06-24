@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { usePageTitle } from '@/components/page-context'
 import { NewLoanForm } from '@/components/loans/new-loan-form'
 
@@ -13,7 +13,9 @@ export default function NewLoanPage() {
 
   return (
     <div className="space-y-8">
-      <NewLoanForm />
+      <Suspense fallback={null}>
+        <NewLoanForm />
+      </Suspense>
     </div>
   )
 }

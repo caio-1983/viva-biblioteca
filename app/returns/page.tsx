@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { usePageTitle } from '@/components/page-context'
 import { ReturnsForm } from '@/components/returns/returns-form'
 
@@ -13,7 +13,9 @@ export default function ReturnsPage() {
 
   return (
     <div className="space-y-8">
-      <ReturnsForm />
+      <Suspense fallback={null}>
+        <ReturnsForm />
+      </Suspense>
     </div>
   )
 }

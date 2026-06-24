@@ -1,8 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Plus } from 'lucide-react'
+import { NewBookForm } from '@/components/books/new-book-form'
 
 interface Book {
   id: number
@@ -18,24 +21,26 @@ export function BooksInventory() {
   const [books, setBooks] = useState<Book[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+
+  const loadBooks = useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/books')
+      if (response.ok) {
+        const data = await response.json()
+        setBooks(data)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar livros:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    async function loadBooks() {
-      try {
-        const response = await fetch('/api/books')
-        if (response.ok) {
-          const data = await response.json()
-          setBooks(data)
-        }
-      } catch (error) {
-        console.error('Erro ao carregar livros:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     loadBooks()
-  }, [])
+  }, [loadBooks])
 
   const filteredBooks = books.filter(
     (book) =>
@@ -44,6 +49,18 @@ export function BooksInventory() {
   )
 
   const availableBooks = filteredBooks.filter(b => b.status === 'DISPONIVEL').length
+
+  if (showForm) {
+    return (
+      <NewBookForm
+        onSuccess={() => {
+          setShowForm(false)
+          loadBooks()
+        }}
+        onCancel={() => setShowForm(false)}
+      />
+    )
+  }
 
   if (loading) {
     return (
@@ -57,10 +74,19 @@ export function BooksInventory() {
 
   return (
     <div className="space-y-6">
-      {/* Search */}
+      {/* Search + action */}
       <Card>
         <CardHeader>
-          <CardTitle>Pesquisar Livro</CardTitle>
+          <div className="flex items-center justify-between gap-4">
+            <CardTitle>Pesquisar Livro</CardTitle>
+            <Button
+              onClick={() => setShowForm(true)}
+              className="gap-2 bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-700 shrink-0"
+            >
+              <Plus className="h-4 w-4" />
+              Novo Título
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Input
