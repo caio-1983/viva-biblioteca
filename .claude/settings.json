@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(taskkill /PID 2932 /F -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Job)",
+      "PowerShell(Stop-Job -PassThru)",
+      "PowerShell(Remove-Job -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(\"Servidores antigos parados\")",
+      "PowerShell(taskkill /PID 2932 /F 2>$null)",
+      "PowerShell(Get-Process node 2>$null)",
+      "PowerShell(Stop-Process -Force 2>$null)",
+      "PowerShell(\"V Todos os processos antigos parados\")"
+    ]
+  }
+}

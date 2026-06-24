@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/app/generated/prisma
+
+# storage - database, backups, exports
+/storage/database/*.db
+/storage/database/*.db-wal
+/storage/database/*.db-shm
+/storage/backups/*
+!/storage/backups/.gitkeep
+/storage/exports/*
+!/storage/exports/.gitkeep
