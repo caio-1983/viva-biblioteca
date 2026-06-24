@@ -21,7 +21,6 @@ export function StatCard({
   lightColor,
   textColor,
 }: StatCardProps) {
-  // @ts-ignore - lucide-react dynamic icon selection
   const Icon = Icons[icon as keyof typeof Icons]
 
   return (
@@ -29,7 +28,7 @@ export function StatCard({
       <div className="p-6">
         {/* Icon Background */}
         <div className={cn('mb-4 inline-flex rounded-lg p-3', lightColor)}>
-          {/* @ts-ignore */}
+          {/* @ts-expect-error lucide-react dynamic icon */}
           <Icon className={cn('h-6 w-6', textColor)} />
         </div>
 
