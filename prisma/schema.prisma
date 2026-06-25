@@ -7,6 +7,27 @@ datasource db {
 }
 
 // ============================================
+// ENUMS DE STATUS (ADR-008)
+// No SQLite, enums são materializados como TEXT; a validação ocorre na
+// camada do Prisma Client e os tipos são gerados como union no TypeScript.
+// ============================================
+enum StatusExemplar {
+  DISPONIVEL
+  EMPRESTADO
+  RESERVADO
+  MANUTENCAO
+  EXTRAVIADO
+  BAIXADO
+}
+
+enum StatusEmprestimo {
+  ATIVO
+  DEVOLVIDO
+  ATRASADO
+  CANCELADO
+}
+
+// ============================================
 // ACERVO - Exemplares de Livros
 // ============================================
 model Acervo {
@@ -27,7 +48,7 @@ model Acervo {
   assunto3            String?
   colecao             String?
   observacao          String?
-  status              String  @default("DISPONIVEL")
+  status              StatusExemplar @default(DISPONIVEL)
   ativo               Boolean @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -64,7 +85,7 @@ model Emprestimo {
   dataEmprestimo          DateTime @default(now())
   dataPrevistaDevolucao   DateTime
   dataDevolucao           DateTime?
-  status                  String  @default("ATIVO")
+  status                  StatusEmprestimo @default(ATIVO)
   createdAt               DateTime @default(now())
 
   usuario                 Usuario @relation(fields: [usuarioId], references: [id], onDelete: Restrict)

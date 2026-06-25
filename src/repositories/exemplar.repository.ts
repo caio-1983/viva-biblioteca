@@ -1,3 +1,4 @@
+import { StatusExemplar } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { ExemplarCreate, ExemplarUpdate, ExemplarFilters } from '@/src/types/exemplar'
 
@@ -82,7 +83,7 @@ export class ExemplarRepository {
     return prisma.acervo.update({ where: { id }, data })
   }
 
-  async updateStatus(id: number, status: string) {
+  async updateStatus(id: number, status: StatusExemplar) {
     return prisma.acervo.update({ where: { id }, data: { status } })
   }
 
@@ -94,7 +95,7 @@ export class ExemplarRepository {
     return prisma.acervo.count({ where: { ativo: true } })
   }
 
-  async countByStatus(status: string) {
+  async countByStatus(status: StatusExemplar) {
     return prisma.acervo.count({ where: { status, ativo: true } })
   }
 
