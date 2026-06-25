@@ -182,41 +182,57 @@ async function main(): Promise<void> {
     },
   ))
 
-  // ── A9: Verificação de Empréstimos (se a coluna exemplarId existe) ──────
-  const colExists = await prisma.$queryRaw<Array<{ name: string }>>`
-    SELECT name FROM pragma_table_info('Emprestimo') WHERE name='exemplarId'
-  `
-  if (colExists.length > 0) {
-    assertions.push(await assert(
-      'A10: Emprestimo.exemplarId preenchido em todos os registros',
-      async () => {
-        const semExemplarId = await prisma.$queryRaw<Array<{ n: number }>>`
-          SELECT COUNT(*) AS n FROM Emprestimo WHERE exemplarId IS NULL
-        `
-        const n = Number(semExemplarId[0]?.n ?? 0)
-        if (n > 0) fail(`${n} Empréstimo(s) sem exemplarId — execute 03-migrate-emprestimos.ts`)
-        const total = await prisma.emprestimo.count()
-        return `${total} empréstimos com exemplarId`
-      },
-    ))
+  // ── A10–A11: Integridade dos Empréstimos — coluna obrigatória neste ponto ──
+  // exemplarId foi adicionado pela migration etapa2_fase1b; não deve ser opcional aqui.
+  // Se a coluna não existir, a migration não foi aplicada — bloqueante.
+  assertions.push(await assert(
+    'A10: Emprestimo.exemplarId preenchido em 100% dos registros',
+    async () => {
+      const colCheck = await prisma.$queryRaw<Array<{ name: string }>>`
+        SELECT name FROM pragma_table_info('Emprestimo') WHERE name='exemplarId'
+      `
+      if (colCheck.length === 0) {
+        fail('Coluna Emprestimo.exemplarId não existe — aplique a migration etapa2_fase1b primeiro')
+      }
+      const pendentes = await prisma.emprestimo.count({ where: { exemplarId: null } })
+      if (pendentes > 0) fail(`${pendentes} Empréstimo(s) com exemplarId NULL — execute 03-migrate-emprestimos.ts`)
+      const total = await prisma.emprestimo.count()
+      return `${total} empréstimos com exemplarId preenchido`
+    },
+  ))
 
-    assertions.push(await assert(
-      'A11: Emprestimo.exemplarId referencia Exemplar existente',
-      async () => {
-        const rows = await prisma.$queryRaw<Array<{ n: number }>>`
-          SELECT COUNT(*) AS n FROM Emprestimo e
-          WHERE e.exemplarId IS NOT NULL
-          AND NOT EXISTS (SELECT 1 FROM Exemplar ex WHERE ex.id = e.exemplarId)
-        `
-        const n = Number(rows[0]?.n ?? 0)
-        if (n > 0) fail(`${n} Empréstimo(s) com exemplarId inexistente`)
-        return 'sem orphans'
-      },
-    ))
-  } else {
-    console.log('ℹ️   Emprestimo.exemplarId ainda não existe (Script 03 não foi executado)')
-    console.log('     As validações A10/A11 serão verificadas após o Passo 5.\n')
-  }
+  assertions.push(await assert(
+    'A11: Emprestimo.exemplarId referencia Exemplar existente (sem orphans)',
+    async () => {
+      const rows = await prisma.$queryRaw<Array<{ n: number }>>`
+        SELECT COUNT(*) AS n FROM Emprestimo e
+        WHERE e.exemplarId IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM Exemplar ex WHERE ex.id = e.exemplarId)
+      `
+      const n = Number(rows[0]?.n ?? 0)
+      if (n > 0) fail(`${n} Empréstimo(s) referenciam Exemplar inexistente`)
+      return 'integridade referencial OK'
+    },
+  ))
+
+  // ── A12: Unicidade de Exemplar.codigoExemplar ──────────────────────────
+  // @unique no schema garante a nível de banco, mas a asserção explícita documenta
+  // a regra de negócio (ADR-005) e detecta qualquer falha de migração antes do Passo 6.
+  assertions.push(await assert(
+    'A12: Exemplar.codigoExemplar únicos em toda a tabela (ADR-005)',
+    async () => {
+      const rows = await prisma.$queryRaw<Array<{ n: number }>>`
+        SELECT COUNT(*) AS n FROM (
+          SELECT codigoExemplar FROM Exemplar
+          GROUP BY codigoExemplar HAVING COUNT(*) > 1
+        )
+      `
+      const n = Number(rows[0]?.n ?? 0)
+      if (n > 0) fail(`${n} código(s) EX duplicado(s) — violação crítica do ADR-005`)
+      const total = await prisma.exemplar.count()
+      return `${total} códigos EX, todos únicos`
+    },
+  ))
 
   // ── Relatório ─────────────────────────────────────────────────────────────
   console.log('Resultados:')

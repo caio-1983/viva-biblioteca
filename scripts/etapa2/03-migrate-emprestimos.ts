@@ -1,17 +1,18 @@
 /**
  * ETAPA 2 — Script 03: Migração de Empréstimos (acervoId → exemplarId)
  *
- * PRÉ-REQUISITO: a coluna Emprestimo.exemplarId (nullable Int) deve existir no banco.
- * Ela é adicionada como migration aditiva antes de executar este script (parte do Passo 5).
- * Se a coluna não existir, o script encerra com exit(1) e fornece instruções.
+ * PRÉ-REQUISITO: Emprestimo.exemplarId (nullable Int) deve existir no banco.
+ * A coluna foi adicionada pela migration etapa2_fase1b_emprestimo_exemplarId.
+ * Se por algum motivo não existir, o script encerra com exit(1) e orienta o próximo passo.
  *
- * Para cada Emprestimo: consulta MigracaoAuditoria pelo acervoId e preenche exemplarId.
- * Usa SQL direto ($executeRaw) porque a coluna exemplarId não está no schema atual
- * do Prisma Client (será adicionada junto com o Passo 5).
- *
- * IDEMPOTENTE: pula registros onde exemplarId já está preenchido.
+ * IDEMPOTENTE — 3 garantias:
+ *   1. Se todos os Empréstimos já têm exemplarId → skip total
+ *   2. WHERE exemplarId IS NULL: apenas registros pendentes são processados
+ *   3. Execução parcial (interrupção) → seguro re-executar, retoma do ponto parado
  *
  * Execução (da raiz do projeto):
+ *   npm run migrate:emprestimos
+ *   — ou —
  *   npx tsx scripts/etapa2/03-migrate-emprestimos.ts
  */
 
@@ -59,52 +60,49 @@ async function main(): Promise<void> {
   const totalEmprestimos = await prisma.emprestimo.count()
   console.log(`Total de Empréstimos: ${totalEmprestimos}`)
 
-  // Idempotência: conta quantos já têm exemplarId preenchido
-  const jaPreenchidos = await prisma.$queryRaw<Array<{ n: number }>>`
-    SELECT COUNT(*) AS n FROM Emprestimo WHERE exemplarId IS NOT NULL
-  `
-  const nJaPreenchidos = Number(jaPreenchidos[0]?.n ?? 0)
-
-  if (nJaPreenchidos === totalEmprestimos && totalEmprestimos > 0) {
+  // Idempotência — garantia 1: skip total se todos já estão preenchidos
+  const pendentes = await prisma.emprestimo.count({ where: { exemplarId: null } })
+  if (pendentes === 0 && totalEmprestimos > 0) {
     console.log('ℹ️   Todos os Empréstimos já têm exemplarId preenchido.')
     console.log('     Script 03 já foi executado — pulando.\n')
     return
   }
-
-  if (nJaPreenchidos > 0) {
-    console.log(`ℹ️   ${nJaPreenchidos} já preenchidos, ${totalEmprestimos - nJaPreenchidos} pendentes.`)
+  const jaPreenchidos = totalEmprestimos - pendentes
+  if (jaPreenchidos > 0) {
+    console.log(`ℹ️   ${jaPreenchidos} já preenchidos, ${pendentes} pendentes (retomando).`)
   }
 
-  // Busca todos os mapeamentos acervoId → exemplarId da MigracaoAuditoria
+  // Busca mapeamentos acervoId → exemplarId
   const auditorias = await prisma.migracaoAuditoria.findMany({
     select: { acervoId: true, exemplarId: true },
   })
   const acervoParaExemplar = new Map(auditorias.map(a => [a.acervoId, a.exemplarId]))
 
-  console.log('\nAtualizando Empréstimos...')
-  let atualizados = 0
-  let semMapeamento = 0
-
-  const emprestimos = await prisma.emprestimo.findMany({
+  // Idempotência — garantia 2: WHERE exemplarId IS NULL — só processa pendentes
+  const empretimosPendentes = await prisma.emprestimo.findMany({
+    where: { exemplarId: null },
     select: { id: true, acervoId: true },
   })
 
-  for (const emp of emprestimos) {
+  console.log('\nAtualizando Empréstimos pendentes...')
+  let atualizados = 0
+  let semMapeamento = 0
+
+  for (const emp of empretimosPendentes) {
     const exemplarId = acervoParaExemplar.get(emp.acervoId)
 
     if (!exemplarId) {
       semMapeamento++
-      console.warn(`  ⚠️  Emprestimo #${emp.id}: acervoId=${emp.acervoId} sem Exemplar correspondente`)
+      console.warn(`  ⚠️  Emprestimo #${emp.id}: acervoId=${emp.acervoId} sem Exemplar em MigracaoAuditoria`)
       continue
     }
 
-    await prisma.$executeRaw`
-      UPDATE Emprestimo SET exemplarId = ${exemplarId} WHERE id = ${emp.id}
-    `
+    // Prisma ORM: coluna exemplarId agora está no schema (migration etapa2_fase1b)
+    await prisma.emprestimo.update({ where: { id: emp.id }, data: { exemplarId } })
     atualizados++
   }
 
-  console.log(`\n  ✅ ${atualizados} Empréstimo(s) atualizados com exemplarId`)
+  console.log(`\n  ✅ ${atualizados} Empréstimo(s) atualizados`)
   if (semMapeamento > 0) {
     console.error(`  ❌ ${semMapeamento} Empréstimo(s) sem mapeamento — verifique MigracaoAuditoria`)
     process.exit(1)

@@ -15,6 +15,10 @@ import fs from 'fs'
 import path from 'path'
 import { prisma, disconnect } from './_prisma'
 
+// Versão semântica dos scripts de migração de dados da Etapa 2.
+// Incrementar ao modificar a lógica de qualquer script desta etapa.
+const MIGRATION_VERSION = '1.1.0'
+
 const REPORTS_DIR = path.join(process.cwd(), 'scripts', 'etapa2', 'reports')
 
 // ─── CSV ──────────────────────────────────────────────────────────────────────
@@ -130,8 +134,19 @@ async function main(): Promise<void> {
 
   const seq = await prisma.sequencia.findUnique({ where: { nome: 'exemplar' } })
 
+  // schemaVersion: nome da última migration Prisma aplicada — rastreabilidade do DDL
+  const lastMigration = await prisma.$queryRaw<Array<{ migration_name: string }>>`
+    SELECT migration_name FROM _prisma_migrations
+    WHERE finished_at IS NOT NULL
+    ORDER BY finished_at DESC
+    LIMIT 1
+  `
+  const schemaVersion = lastMigration[0]?.migration_name ?? 'unknown'
+
   const summary = {
     executedAt: new Date().toISOString(),
+    migrationVersion: MIGRATION_VERSION,
+    schemaVersion,
     totais: {
       acervos: totalAcervos,
       obrasCreadas: totalObras,
