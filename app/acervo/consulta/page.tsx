@@ -46,8 +46,6 @@ interface AcervoDetalhado {
   observacao: string | null
   status: string
   ativo: boolean
-  createdAt: string
-  updatedAt: string
 }
 
 interface ListResponse {
