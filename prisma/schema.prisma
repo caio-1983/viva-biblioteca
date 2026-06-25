@@ -97,6 +97,142 @@ model Emprestimo {
 }
 
 // ============================================
+// OBRA - Registro bibliográfico (ADR-001, ADR-002, ADR-008)
+//
+// Uma Obra representa o conteúdo intelectual; existe uma única vez no catálogo,
+// independente de quantos exemplares físicos a biblioteca possua.
+// A Obra nunca possui status de circulação, tombo ou disponibilidade — esses
+// atributos pertencem exclusivamente ao Exemplar (ADR-002 RN-005, RN-006).
+//
+// Campos marcados com "futuro:" indicam pontos de normalização planejados.
+// Nenhuma decisão atual deve impedir essa evolução (ADR-002 §Campos previstos,
+// ADR-008 §Estratégia de Evolução).
+// ============================================
+model Obra {
+  id             Int       @id @default(autoincrement())
+
+  // --- Identificação bibliográfica ---
+  isbn           String?               // ISBN-10 ou ISBN-13; null para obras sem ISBN
+  titulo         String
+  subtitulo      String?
+  tipoPublicacao String?               // futuro: enum TipoPublicacao (LIVRO, PERIODICO, MANUAL…)
+  anoPublicacao  Int?                  // ADR-008: Integer, não DateTime
+
+  // --- Campos previstos para normalização futura ---
+  // Autor, Editora, Assunto e Colecao permanecem como texto até que entidades
+  // próprias sejam introduzidas. A adição futura de FKs será não-destrutiva.
+  autor          String?               // futuro: FK → Autor
+  editora        String?               // futuro: FK → Editora
+  edicao         String?
+  idioma         String?
+  classificacao  String?
+  assunto1       String?               // futuro: FK → Assunto
+  assunto2       String?
+  assunto3       String?
+  colecao        String?               // futuro: FK → Colecao
+  sinopse        String?
+  capaUrl        String?
+
+  // --- Controle de ciclo de vida ---
+  ativo          Boolean   @default(true)
+  deletedAt      DateTime?             // soft delete (ADR-008 §Exclusão); campo criado agora
+                                       // para evitar migration futura; não usado até Etapa 3
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  exemplares     Exemplar[]
+
+  // Índices obrigatórios (ADR-008 §Índices Obrigatórios — Obra)
+  @@index([isbn])
+  @@index([titulo])
+  @@index([autor])    // pesquisa por autor prevista em ADR-002 §Pesquisa
+}
+
+// ============================================
+// EXEMPLAR - Cópia física (ADR-002, ADR-005, ADR-008)
+//
+// Representa um patrimônio físico pertencente à biblioteca.
+// Todo Exemplar pertence obrigatoriamente a exatamente uma Obra (ADR-002 RN-002, RN-003).
+// codigoExemplar (EX000001) é imutável após criação e gerado pela tabela Sequencia.
+// ============================================
+model Exemplar {
+  id             Int            @id @default(autoincrement())
+
+  // Relação obrigatória (ADR-002 RN-002: nenhum Exemplar existe sem Obra)
+  obraId         Int
+  obra           Obra           @relation(fields: [obraId], references: [id], onDelete: Restrict)
+
+  // --- Identificação patrimonial ---
+  codigoExemplar String         @unique  // ADR-005: formato EX000001; imutável após criação
+  codigoBarras   String?                 // futuro: leitura por leitor óptico
+  tombo          String?
+
+  // --- Estado e localização ---
+  status         StatusExemplar @default(DISPONIVEL)
+  estadoFisico   String?                 // futuro: enum EstadoFisico (NOVO, BOM, REGULAR, RUIM, PESSIMO)
+  localizacao    String?                 // ex.: "Estante A, Prateleira 3"
+
+  // --- Dados de aquisição ---
+  origem         String?                 // futuro: enum Origem (COMPRA, DOACAO, PERMUTA, OUTRO)
+  dataAquisicao  DateTime?
+  valor          Float?                  // valor patrimonial aproximado
+
+  // --- Observações ---
+  observacao     String?
+
+  // --- Controle de ciclo de vida ---
+  ativo          Boolean        @default(true)
+  deletedAt      DateTime?               // soft delete (ADR-008 §Exclusão); não usado até Etapa 3
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Relação com Emprestimo será adicionada no Passo 6 (Fase 2)
+
+  // Índices obrigatórios (ADR-008 §Índices Obrigatórios — Exemplar)
+  // codigoExemplar já indexado via @unique acima
+  @@index([obraId])
+  @@index([tombo])
+  @@index([codigoBarras])
+  @@index([status])
+}
+
+// ============================================
+// SEQUENCIA - Gerador de códigos monotônicos
+//
+// Separado de Configuracao intencionalmente:
+//   • Configuracao armazena parâmetros editáveis pelo bibliotecário (prazo,
+//     limite de empréstimos, pastas) — misturar um contador monotônico crítico
+//     ali introduz risco de edição acidental e viola separação de responsabilidades.
+//   • Sequencia é genérica e reutilizável para futuras sequências além de
+//     'exemplar': matrícula de leitor, tombo patrimonial, número de inventário.
+// ============================================
+model Sequencia {
+  nome  String @id  // ex.: 'exemplar'
+  valor Int    @default(0)
+}
+
+// ============================================
+// MIGRACAO_AUDITORIA - Rastreabilidade da migração Acervo → Obra + Exemplar
+//
+// Estrutura temporária: será exportada como CSV/JSON pelo Script 05 e removida
+// após validação completa em produção, junto com a renomeação de Acervo.
+// Sem FK em acervoId para suportar futura renomeação da tabela Acervo.
+// ============================================
+model MigracaoAuditoria {
+  id                Int      @id @default(autoincrement())
+  acervoId          Int      @unique  // ID original em Acervo (sem FK — Acervo será renomeada)
+  exemplarId        Int      @unique  // ID criado em Exemplar
+  obraId            Int               // ID criado em Obra
+  estrategia        String            // 'ISBN' | 'COMPOSTA' | 'INDIVIDUAL'
+  chaveDeduplicacao String?           // valor da chave usada para deduplicação
+  needsReview       Boolean  @default(false)  // true = chave INDIVIDUAL; revisar manualmente
+  createdAt         DateTime @default(now())
+
+  @@index([obraId])
+  @@index([exemplarId])
+}
+
+// ============================================
 // CONFIGURACAO - Parâmetros do Sistema
 // ============================================
 model Configuracao {
