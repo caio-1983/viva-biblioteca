@@ -1,12 +1,18 @@
 import { prisma } from '@/lib/prisma'
 import { EmprestimoCreate } from '@/src/types/emprestimo'
+import { EmprestimoComRelacoes } from '@/src/dto/emprestimo.dto'
+
+const INCLUDE_FULL = {
+  usuario: true,
+  exemplar: { include: { obra: true } },
+} as const
 
 export class EmprestimoRepository {
   async create(data: EmprestimoCreate) {
     return prisma.emprestimo.create({
       data: {
         usuarioId: data.usuarioId,
-        acervoId: data.acervoId,
+        exemplarId: data.exemplarId,
         dataEmprestimo: data.dataEmprestimo ?? new Date(),
         dataPrevistaDevolucao: data.dataPrevistaDevolucao,
         status: 'ATIVO',
@@ -14,63 +20,53 @@ export class EmprestimoRepository {
     })
   }
 
-  async findById(id: number) {
-    return prisma.emprestimo.findUnique({
-      where: { id },
-      include: { usuario: true, acervo: true },
-    })
+  async findById(id: number): Promise<EmprestimoComRelacoes | null> {
+    return prisma.emprestimo.findUnique({ where: { id }, include: INCLUDE_FULL })
   }
 
-  async findAtivoByCodigoExemplar(codigoExemplar: string) {
+  async findAtivoByCodigoExemplar(codigoExemplar: string): Promise<EmprestimoComRelacoes | null> {
     return prisma.emprestimo.findFirst({
       where: {
         status: 'ATIVO',
-        acervo: { numeroExemplar: codigoExemplar },
+        exemplar: { codigoExemplar },
       },
-      include: { acervo: true, usuario: true },
+      include: INCLUDE_FULL,
     })
   }
 
-  async findByLeitorId(leitorId: number) {
+  async findByLeitorId(leitorId: number): Promise<EmprestimoComRelacoes[]> {
     return prisma.emprestimo.findMany({
       where: { usuarioId: leitorId },
-      include: {
-        acervo: {
-          select: { titulo: true, autor: true, numeroExemplar: true },
-        },
-      },
+      include: INCLUDE_FULL,
       orderBy: { dataEmprestimo: 'desc' },
     })
   }
 
-  async findMany(page = 1, limit = 100) {
+  async findMany(page = 1, limit = 100): Promise<EmprestimoComRelacoes[]> {
     const skip = (page - 1) * limit
     return prisma.emprestimo.findMany({
       skip,
       take: limit,
-      include: {
-        usuario: { select: { nomeCompleto: true, numeroCadastro: true } },
-        acervo: { select: { titulo: true, numeroExemplar: true } },
-      },
+      include: INCLUDE_FULL,
       orderBy: { dataEmprestimo: 'desc' },
     })
   }
 
-  async countAtivos() {
+  async countAtivos(): Promise<number> {
     return prisma.emprestimo.count({ where: { status: 'ATIVO' } })
   }
 
-  async countAtrasados() {
+  async countAtrasados(): Promise<number> {
     return prisma.emprestimo.count({
       where: { status: 'ATIVO', dataPrevistaDevolucao: { lt: new Date() } },
     })
   }
 
-  async countTotal() {
+  async countTotal(): Promise<number> {
     return prisma.emprestimo.count()
   }
 
-  async countAtivosByLeitorId(leitorId: number) {
+  async countAtivosByLeitorId(leitorId: number): Promise<number> {
     return prisma.emprestimo.count({ where: { usuarioId: leitorId, status: 'ATIVO' } })
   }
 
@@ -81,32 +77,29 @@ export class EmprestimoRepository {
     })
   }
 
-  async findAtrasados(limit = 20) {
+  async findAtrasados(limit = 20): Promise<EmprestimoComRelacoes[]> {
     return prisma.emprestimo.findMany({
       where: { status: 'ATIVO', dataPrevistaDevolucao: { lt: new Date() } },
-      include: {
-        acervo: { select: { titulo: true, numeroExemplar: true } },
-        usuario: { select: { nomeCompleto: true, numeroCadastro: true } },
-      },
+      include: INCLUDE_FULL,
       orderBy: { dataPrevistaDevolucao: 'asc' },
       take: limit,
     })
   }
 
   async findMaisEmprestados(limit = 10) {
-    // Prisma groupBy não suporta include — usamos queryRaw para o JOIN
     const rows = await prisma.$queryRaw<
       Array<{
         titulo: string
         autor: string | null
-        numeroExemplar: string
+        codigoExemplar: string
         totalEmprestimos: number | bigint
       }>
     >`
-      SELECT a.titulo, a.autor, a.numeroExemplar, COUNT(*) AS totalEmprestimos
+      SELECT o.titulo, o.autor, ex.codigoExemplar, COUNT(*) AS totalEmprestimos
       FROM Emprestimo e
-      JOIN Acervo a ON a.id = e.acervoId
-      GROUP BY e.acervoId
+      JOIN Exemplar ex ON ex.id = e.exemplarId
+      JOIN Obra o ON o.id = ex.obraId
+      GROUP BY e.exemplarId
       ORDER BY totalEmprestimos DESC
       LIMIT ${limit}
     `

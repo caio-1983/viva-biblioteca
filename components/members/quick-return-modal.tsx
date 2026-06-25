@@ -7,13 +7,14 @@ import { Button } from '@/components/ui/button'
 
 interface Emprestimo {
   id: number
+  exemplarId: number
   dataEmprestimo: string
   dataPrevistaDevolucao: string
   dataDevolucao: string | null
   status: string
   titulo: string
   autor: string | null
-  numeroExemplar: string
+  codigoExemplar: string
 }
 
 interface QuickReturnModalProps {
@@ -65,16 +66,12 @@ export function QuickReturnModal({ userId, userName, numeroCadastro, onClose }: 
   const handleDevolver = async (emprestimo: Emprestimo) => {
     setReturning(emprestimo.id)
     try {
-      const acervoRes = await fetch(`/api/books`)
-      const books = await acervoRes.json()
-      const book = books.find((b: { numeroExemplar: string; id: number }) => b.numeroExemplar === emprestimo.numeroExemplar)
-
       const res = await fetch('/api/returns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           emprestimoId: emprestimo.id,
-          acervoId: book?.id,
+          exemplarId: emprestimo.exemplarId,
         }),
       })
 
@@ -143,7 +140,7 @@ export function QuickReturnModal({ userId, userName, numeroCadastro, onClose }: 
                   <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-green-700 dark:text-green-300">{e.titulo}</p>
-                    <p className="font-mono text-xs text-green-600/70 dark:text-green-400/60">{e.numeroExemplar} · Devolvido</p>
+                    <p className="font-mono text-xs text-green-600/70 dark:text-green-400/60">{e.codigoExemplar} · Devolvido</p>
                   </div>
                 </div>
               ))}
@@ -166,7 +163,7 @@ export function QuickReturnModal({ userId, userName, numeroCadastro, onClose }: 
                   >
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold text-sm text-foreground">{e.titulo}</p>
-                      <p className="mt-0.5 font-mono text-xs text-muted-foreground">{e.numeroExemplar}</p>
+                      <p className="mt-0.5 font-mono text-xs text-muted-foreground">{e.codigoExemplar}</p>
                       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                         <span>Empréstimo: {formatDate(e.dataEmprestimo)}</span>
                         <span>Previsto: {formatDate(e.dataPrevistaDevolucao)}</span>

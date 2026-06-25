@@ -36,7 +36,7 @@ interface DiaData {
 
 interface Atrasado {
   titulo: string
-  numeroExemplar: string
+  codigoExemplar: string
   nomeCompleto: string
   numeroCadastro: string
   dataPrevistaDevolucao: string
@@ -46,7 +46,7 @@ interface Atrasado {
 interface MaisEmprestado {
   titulo: string
   autor: string | null
-  numeroExemplar: string
+  codigoExemplar: string
   totalEmprestimos: number
 }
 

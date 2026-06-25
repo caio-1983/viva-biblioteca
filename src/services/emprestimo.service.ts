@@ -7,7 +7,7 @@ export class EmprestimoService {
   async registrar(data: EmprestimoCreate) {
     const config = await configuracaoRepository.get()
 
-    const exemplar = await exemplarRepository.findById(data.acervoId)
+    const exemplar = await exemplarRepository.findById(data.exemplarId)
     if (!exemplar || !exemplar.ativo) throw new Error('Exemplar não encontrado')
     if (exemplar.status !== 'DISPONIVEL') throw new Error('Exemplar não está disponível')
 
@@ -19,7 +19,7 @@ export class EmprestimoService {
     }
 
     const emprestimo = await emprestimoRepository.create(data)
-    await exemplarRepository.updateStatus(data.acervoId, 'EMPRESTADO')
+    await exemplarRepository.updateStatus(data.exemplarId, 'EMPRESTADO')
 
     return emprestimo
   }

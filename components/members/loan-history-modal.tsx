@@ -13,7 +13,7 @@ interface Emprestimo {
   status: string
   titulo: string
   autor: string | null
-  numeroExemplar: string
+  codigoExemplar: string
 }
 
 interface LoanHistoryModalProps {
@@ -169,7 +169,7 @@ export function LoanHistoryModal({ userId, userName, numeroCadastro, onClose }: 
                         </span>
                       </div>
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {e.autor ?? '—'} · <span className="font-mono">{e.numeroExemplar}</span>
+                        {e.autor ?? '—'} · <span className="font-mono">{e.codigoExemplar}</span>
                       </p>
                       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                         <span>

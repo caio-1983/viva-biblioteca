@@ -18,7 +18,7 @@ import {
 
 interface Acervo {
   id: number
-  numeroExemplar: string
+  codigoExemplar: string
   titulo: string
   autor: string | null
   classificacao: string | null
@@ -28,7 +28,7 @@ interface Acervo {
 
 interface AcervoDetalhado {
   id: number
-  numeroExemplar: string
+  codigoExemplar: string
   tipoPublicacao: string | null
   isbn: string | null
   classificacao: string | null
@@ -37,7 +37,7 @@ interface AcervoDetalhado {
   autor: string | null
   edicao: string | null
   editora: string | null
-  dataPublicacao: string | null
+  anoPublicacao: number | null
   tombo: string | null
   assunto1: string | null
   assunto2: string | null
@@ -256,7 +256,7 @@ function ConsultaContent() {
                       className="border-b border-border hover:bg-muted/50 transition-colors"
                     >
                       <td className="px-6 py-4 font-mono text-xs font-semibold text-foreground">
-                        {acervo.numeroExemplar}
+                        {acervo.codigoExemplar}
                       </td>
                       <td className="px-6 py-4 max-w-xs truncate">
                         <button
@@ -393,7 +393,7 @@ function ConsultaContent() {
                       {statusLabel[selectedAcervo.status] ?? selectedAcervo.status}
                     </span>
                     <span className="text-xs text-muted-foreground font-mono">
-                      Nº {selectedAcervo.numeroExemplar}
+                      Nº {selectedAcervo.codigoExemplar}
                     </span>
                     {selectedAcervo.tombo && (
                       <span className="text-xs text-muted-foreground">
@@ -427,9 +427,7 @@ function ConsultaContent() {
                       <Field
                         label="Ano de Publicação"
                         value={
-                          selectedAcervo.dataPublicacao
-                            ? new Date(selectedAcervo.dataPublicacao).getFullYear().toString()
-                            : null
+                          selectedAcervo.anoPublicacao?.toString() ?? null
                         }
                       />
                     </div>

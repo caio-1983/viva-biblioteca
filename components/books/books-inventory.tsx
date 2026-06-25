@@ -9,7 +9,7 @@ import { NewBookForm } from '@/components/books/new-book-form'
 
 interface Book {
   id: number
-  numeroExemplar: string
+  codigoExemplar: string
   titulo: string
   autor: string | null
   classificacao: string | null
@@ -19,7 +19,7 @@ interface Book {
 
 interface BookDetalhado {
   id: number
-  numeroExemplar: string
+  codigoExemplar: string
   tipoPublicacao: string | null
   isbn: string | null
   classificacao: string | null
@@ -28,7 +28,7 @@ interface BookDetalhado {
   autor: string | null
   edicao: string | null
   editora: string | null
-  dataPublicacao: string | null
+  anoPublicacao: number | null
   tombo: string | null
   assunto1: string | null
   assunto2: string | null
@@ -36,6 +36,7 @@ interface BookDetalhado {
   colecao: string | null
   observacao: string | null
   status: string
+  ativo: boolean
 }
 
 const STATUS_OPTIONS = [
@@ -69,7 +70,7 @@ interface EditFields {
   autor: string
   edicao: string
   editora: string
-  dataPublicacao: string
+  anoPublicacao: string
   tombo: string
   assunto1: string
   assunto2: string
@@ -125,9 +126,7 @@ export function BooksInventory() {
       autor: selectedBook.autor || '',
       edicao: selectedBook.edicao || '',
       editora: selectedBook.editora || '',
-      dataPublicacao: selectedBook.dataPublicacao
-        ? new Date(selectedBook.dataPublicacao).getFullYear().toString()
-        : '',
+      anoPublicacao: selectedBook.anoPublicacao?.toString() ?? '',
       tombo: selectedBook.tombo || '',
       assunto1: selectedBook.assunto1 || '',
       assunto2: selectedBook.assunto2 || '',
@@ -168,7 +167,7 @@ export function BooksInventory() {
           autor: editData.autor || null,
           edicao: editData.edicao || null,
           editora: editData.editora || null,
-          dataPublicacao: editData.dataPublicacao || null,
+          anoPublicacao: editData.anoPublicacao ? Number(editData.anoPublicacao) : null,
           tombo: editData.tombo || null,
           assunto1: editData.assunto1 || null,
           assunto2: editData.assunto2 || null,
@@ -293,7 +292,7 @@ export function BooksInventory() {
                   <tbody>
                     {filteredBooks.map((book) => (
                       <tr key={book.id} className="border-b border-border hover:bg-muted/50">
-                        <td className="py-3 px-4 font-mono text-xs">{book.numeroExemplar}</td>
+                        <td className="py-3 px-4 font-mono text-xs">{book.codigoExemplar}</td>
                         <td className="py-3 px-4">
                           <button
                             onClick={() => openModal(book.id)}
@@ -407,7 +406,7 @@ export function BooksInventory() {
                       {STATUS_LABEL[selectedBook.status] ?? selectedBook.status}
                     </span>
                     <span className="font-mono text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                      Nº {selectedBook.numeroExemplar}
+                      Nº {selectedBook.codigoExemplar}
                     </span>
                     {selectedBook.tombo && (
                       <span className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
@@ -424,7 +423,7 @@ export function BooksInventory() {
                     <div className="mb-5 flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-4 py-3">
                       <span className="text-xs text-muted-foreground">Nº Exemplar</span>
                       <span className="font-mono text-sm font-semibold text-foreground">
-                        {selectedBook.numeroExemplar}
+                        {selectedBook.codigoExemplar}
                       </span>
                       <span className="ml-auto text-xs text-muted-foreground">não editável</span>
                     </div>
@@ -500,7 +499,7 @@ export function BooksInventory() {
                         <EditField label="ISBN" name="isbn" value={editData.isbn} onChange={handleEditChange} mono />
                         <EditField label="Classificação" name="classificacao" value={editData.classificacao} onChange={handleEditChange} mono />
                         <EditField label="Edição" name="edicao" value={editData.edicao} onChange={handleEditChange} />
-                        <EditField label="Ano" name="dataPublicacao" value={editData.dataPublicacao} onChange={handleEditChange} maxLength={4} placeholder="Ex: 2024" />
+                        <EditField label="Ano" name="anoPublicacao" value={editData.anoPublicacao} onChange={handleEditChange} maxLength={4} placeholder="Ex: 2024" />
                       </div>
 
                       {/* Tombo + Coleção */}
@@ -560,9 +559,7 @@ export function BooksInventory() {
 
                     {/* Secondary metadata — inline, only populated fields */}
                     {(() => {
-                      const ano = selectedBook.dataPublicacao
-                        ? new Date(selectedBook.dataPublicacao).getFullYear().toString()
-                        : null
+                      const ano = selectedBook.anoPublicacao?.toString() ?? null
                       const secondary = [
                         selectedBook.isbn && { label: 'ISBN', value: selectedBook.isbn },
                         selectedBook.edicao && { label: 'Edição', value: selectedBook.edicao },

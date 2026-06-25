@@ -1,110 +1,170 @@
 import { StatusExemplar } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { ExemplarCreate, ExemplarUpdate, ExemplarFilters } from '@/src/types/exemplar'
+import { ExemplarComObra, ExemplarListItemDTO, ExemplarDetailDTO, toExemplarListItemDTO, toExemplarDetailDTO } from '@/src/dto/exemplar.dto'
+
+const INCLUDE_OBRA = { obra: true } as const
 
 export class ExemplarRepository {
-  async create(data: ExemplarCreate) {
-    // Insere com código temporário, obtém o ID gerado e atualiza com o código definitivo.
-    // Garante que codigoExemplar seja baseado no ID real e não em estimativas concorrentes.
+  async create(data: ExemplarCreate): Promise<ExemplarComObra> {
     return prisma.$transaction(async (tx) => {
-      const record = await tx.acervo.create({
+      // TODO: implementar deduplicação completa de Obra (ADR-001/002):
+      //   - Estratégia ISBN: buscar Obra existente por ISBN normalizado antes de criar
+      //   - Estratégia COMPOSTA: buscar por (titulo, autor, editora, edicao) normalizados
+      //   - Estratégia INDIVIDUAL: criar sempre uma Obra nova (comportamento atual)
+      // Por ora, cada cadastro cria uma Obra nova sem verificação de duplicata.
+      const obra = await tx.obra.create({
         data: {
-          ...data,
-          numeroExemplar: 'TEMP',
+          isbn: data.isbn ?? null,
+          tipoPublicacao: data.tipoPublicacao ?? null,
+          classificacao: data.classificacao ?? null,
+          titulo: data.titulo,
+          subtitulo: data.subtitulo ?? null,
+          autor: data.autor ?? null,
+          edicao: data.edicao ?? null,
+          editora: data.editora ?? null,
+          anoPublicacao: data.anoPublicacao ?? null,
+          assunto1: data.assunto1 ?? null,
+          assunto2: data.assunto2 ?? null,
+          assunto3: data.assunto3 ?? null,
+          colecao: data.colecao ?? null,
+        },
+      })
+
+      // Incremento atômico da Sequencia para gerar codigoExemplar único
+      const seq = await tx.sequencia.update({
+        where: { nome: 'exemplar' },
+        data: { valor: { increment: 1 } },
+      })
+      const codigoExemplar = `EX${String(seq.valor).padStart(6, '0')}`
+
+      return tx.exemplar.create({
+        data: {
+          obraId: obra.id,
+          codigoExemplar,
+          tombo: data.tombo ?? null,
+          observacao: data.observacao ?? null,
           status: 'DISPONIVEL',
           ativo: true,
         },
-      })
-      const codigoExemplar = `EX${String(record.id).padStart(6, '0')}`
-      return tx.acervo.update({
-        where: { id: record.id },
-        data: { numeroExemplar: codigoExemplar },
+        include: INCLUDE_OBRA,
       })
     })
   }
 
-  async findById(id: number) {
-    return prisma.acervo.findUnique({ where: { id } })
+  async findById(id: number): Promise<ExemplarComObra | null> {
+    return prisma.exemplar.findUnique({ where: { id }, include: INCLUDE_OBRA })
   }
 
-  async findByCodigoExemplar(codigo: string) {
-    return prisma.acervo.findUnique({ where: { numeroExemplar: codigo } })
+  async findByCodigoExemplar(codigo: string): Promise<ExemplarComObra | null> {
+    return prisma.exemplar.findUnique({ where: { codigoExemplar: codigo }, include: INCLUDE_OBRA })
   }
 
-  async findByTombo(tombo: string) {
-    return prisma.acervo.findFirst({ where: { tombo } })
+  async findByTombo(tombo: string): Promise<ExemplarComObra | null> {
+    return prisma.exemplar.findFirst({ where: { tombo }, include: INCLUDE_OBRA })
   }
 
-  async findMany(filters?: ExemplarFilters, page = 1, limit = 20) {
+  async findMany(
+    filters?: ExemplarFilters,
+    page = 1,
+    limit = 20,
+  ): Promise<{ data: ExemplarDetailDTO[]; total: number; pages: number }> {
     const skip = (page - 1) * limit
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = { ativo: filters?.ativo !== false }
 
-    if (filters?.titulo) where.titulo = { contains: filters.titulo }
-    if (filters?.autor)  where.autor  = { contains: filters.autor }
+    if (filters?.titulo) where.obra = { ...where.obra, titulo: { contains: filters.titulo } }
+    if (filters?.autor)  where.obra = { ...where.obra, autor:  { contains: filters.autor  } }
     if (filters?.assunto) {
-      where.OR = [
-        { assunto1: { contains: filters.assunto } },
-        { assunto2: { contains: filters.assunto } },
-        { assunto3: { contains: filters.assunto } },
-      ]
+      where.obra = {
+        ...where.obra,
+        OR: [
+          { assunto1: { contains: filters.assunto } },
+          { assunto2: { contains: filters.assunto } },
+          { assunto3: { contains: filters.assunto } },
+        ],
+      }
     }
     if (filters?.status) where.status = filters.status
 
-    const [data, total] = await Promise.all([
-      prisma.acervo.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { titulo: 'asc' },
-      }),
-      prisma.acervo.count({ where }),
+    const [rows, total] = await Promise.all([
+      prisma.exemplar.findMany({ where, skip, take: limit, orderBy: { obra: { titulo: 'asc' } }, include: INCLUDE_OBRA }),
+      prisma.exemplar.count({ where }),
     ])
 
-    return { data, total, pages: Math.ceil(total / limit) }
+    return { data: rows.map(toExemplarDetailDTO), total, pages: Math.ceil(total / limit) }
   }
 
-  async findAll() {
-    return prisma.acervo.findMany({
+  async findAll(): Promise<ExemplarListItemDTO[]> {
+    const rows = await prisma.exemplar.findMany({
       where: { ativo: true },
-      orderBy: { titulo: 'asc' },
-      select: {
-        id: true,
-        numeroExemplar: true,
-        titulo: true,
-        autor: true,
-        assunto1: true,
-        status: true,
-      },
+      orderBy: { obra: { titulo: 'asc' } },
+      include: INCLUDE_OBRA,
     })
+    return rows.map(toExemplarListItemDTO)
   }
 
-  async update(id: number, data: ExemplarUpdate) {
-    return prisma.acervo.update({ where: { id }, data })
+  async update(id: number, data: ExemplarUpdate): Promise<ExemplarComObra> {
+    const exemplar = await prisma.exemplar.findUniqueOrThrow({ where: { id } })
+
+    const { tombo, observacao, status, ativo, ...obraFields } = data
+    const { anoPublicacao, tipoPublicacao, isbn, classificacao, titulo, subtitulo,
+            autor, edicao, editora, assunto1, assunto2, assunto3, colecao } = obraFields
+
+    await prisma.$transaction(async (tx) => {
+      if (Object.keys(obraFields).length > 0) {
+        await tx.obra.update({
+          where: { id: exemplar.obraId },
+          data: {
+            ...(isbn !== undefined           && { isbn }),
+            ...(tipoPublicacao !== undefined && { tipoPublicacao }),
+            ...(classificacao !== undefined  && { classificacao }),
+            ...(titulo !== undefined         && { titulo }),
+            ...(subtitulo !== undefined      && { subtitulo }),
+            ...(autor !== undefined          && { autor }),
+            ...(edicao !== undefined         && { edicao }),
+            ...(editora !== undefined        && { editora }),
+            ...(anoPublicacao !== undefined  && { anoPublicacao }),
+            ...(assunto1 !== undefined       && { assunto1 }),
+            ...(assunto2 !== undefined       && { assunto2 }),
+            ...(assunto3 !== undefined       && { assunto3 }),
+            ...(colecao !== undefined        && { colecao }),
+          },
+        })
+      }
+      await tx.exemplar.update({
+        where: { id },
+        data: {
+          ...(tombo !== undefined       && { tombo }),
+          ...(observacao !== undefined  && { observacao }),
+          ...(status !== undefined      && { status }),
+          ...(ativo !== undefined       && { ativo }),
+        },
+      })
+    })
+
+    return prisma.exemplar.findUniqueOrThrow({ where: { id }, include: INCLUDE_OBRA })
   }
 
-  async updateStatus(id: number, status: StatusExemplar) {
-    return prisma.acervo.update({ where: { id }, data: { status } })
+  async updateStatus(id: number, status: StatusExemplar): Promise<void> {
+    await prisma.exemplar.update({ where: { id }, data: { status } })
   }
 
-  async softDelete(id: number) {
-    return prisma.acervo.update({ where: { id }, data: { ativo: false } })
+  async softDelete(id: number): Promise<void> {
+    await prisma.exemplar.update({ where: { id }, data: { ativo: false } })
   }
 
-  async countAll() {
-    return prisma.acervo.count({ where: { ativo: true } })
+  async countAll(): Promise<number> {
+    return prisma.exemplar.count({ where: { ativo: true } })
   }
 
-  async countByStatus(status: StatusExemplar) {
-    return prisma.acervo.count({ where: { status, ativo: true } })
+  async countByStatus(status: StatusExemplar): Promise<number> {
+    return prisma.exemplar.count({ where: { status, ativo: true } })
   }
 
   async getNextSequence(): Promise<number> {
-    const last = await prisma.acervo.findFirst({
-      select: { id: true },
-      orderBy: { id: 'desc' },
-    })
-    return (last?.id ?? 0) + 1
+    const seq = await prisma.sequencia.findUnique({ where: { nome: 'exemplar' } })
+    return (seq?.valor ?? 0) + 1
   }
 }
 

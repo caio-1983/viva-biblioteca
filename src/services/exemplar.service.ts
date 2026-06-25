@@ -1,8 +1,10 @@
 import { exemplarRepository } from '@/src/repositories/exemplar.repository'
 import { ExemplarCreate, ExemplarUpdate, ExemplarFilters } from '@/src/types/exemplar'
+import { ExemplarComObra } from '@/src/dto/exemplar.dto'
+import { toExemplarDetailDTO } from '@/src/dto/exemplar.dto'
 
 export class ExemplarService {
-  async criar(data: ExemplarCreate) {
+  async criar(data: ExemplarCreate): Promise<ExemplarComObra> {
     if (!data.titulo?.trim()) throw new Error('Título é obrigatório')
     return exemplarRepository.create(data)
   }
@@ -10,7 +12,7 @@ export class ExemplarService {
   async buscarPorId(id: number) {
     const exemplar = await exemplarRepository.findById(id)
     if (!exemplar) throw new Error('Exemplar não encontrado')
-    return exemplar
+    return toExemplarDetailDTO(exemplar)
   }
 
   async listar(filters?: ExemplarFilters, page = 1, limit = 20) {
@@ -23,7 +25,8 @@ export class ExemplarService {
 
   async atualizar(id: number, data: ExemplarUpdate) {
     await this.buscarPorId(id)
-    return exemplarRepository.update(id, data)
+    const updated = await exemplarRepository.update(id, data)
+    return toExemplarDetailDTO(updated)
   }
 
   async inativar(id: number) {

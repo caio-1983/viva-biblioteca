@@ -31,10 +31,9 @@ export class RelatorioService {
       this.getAssuntos(8),
     ])
 
-    // Calcula diasAtraso no serviço para evitar dependência de funções SQLite
     const atrasados = atrasadosRaw.map((e) => ({
-      titulo: e.acervo.titulo,
-      numeroExemplar: e.acervo.numeroExemplar,
+      titulo: e.exemplar.obra.titulo,
+      codigoExemplar: e.exemplar.codigoExemplar,
       nomeCompleto: e.usuario.nomeCompleto,
       numeroCadastro: e.usuario.numeroCadastro,
       dataPrevistaDevolucao: e.dataPrevistaDevolucao,
@@ -62,7 +61,7 @@ export class RelatorioService {
   private async getAssuntos(limit: number) {
     const rows = await prisma.$queryRaw<Array<{ nome: string; total: number | bigint }>>`
       SELECT assunto1 AS nome, COUNT(*) AS total
-      FROM Acervo
+      FROM Obra
       WHERE ativo = 1 AND assunto1 IS NOT NULL AND assunto1 != ''
       GROUP BY assunto1
       ORDER BY total DESC
@@ -72,31 +71,28 @@ export class RelatorioService {
   }
 
   async exportarAcervo() {
-    const rows = await prisma.acervo.findMany({
+    const rows = await prisma.exemplar.findMany({
       where: { ativo: true },
-      orderBy: { titulo: 'asc' },
-      select: {
-        numeroExemplar: true, tipoPublicacao: true, isbn: true,
-        classificacao: true, titulo: true, subtitulo: true, autor: true,
-        edicao: true, editora: true, assunto1: true, assunto2: true,
-        assunto3: true, colecao: true, status: true,
-      },
+      orderBy: { obra: { titulo: 'asc' } },
+      include: { obra: true },
     })
-    return rows.map((a) => ({
-      'Nº Exemplar': a.numeroExemplar,
-      'Tipo': a.tipoPublicacao,
-      'ISBN': a.isbn,
-      'Classificação': a.classificacao,
-      'Título': a.titulo,
-      'Subtítulo': a.subtitulo,
-      'Autor': a.autor,
-      'Edição': a.edicao,
-      'Editora': a.editora,
-      'Assunto 1': a.assunto1,
-      'Assunto 2': a.assunto2,
-      'Assunto 3': a.assunto3,
-      'Coleção': a.colecao,
-      'Status': a.status,
+    return rows.map((e) => ({
+      'Cód. Exemplar': e.codigoExemplar,
+      'Tipo': e.obra.tipoPublicacao,
+      'ISBN': e.obra.isbn,
+      'Classificação': e.obra.classificacao,
+      'Título': e.obra.titulo,
+      'Subtítulo': e.obra.subtitulo,
+      'Autor': e.obra.autor,
+      'Edição': e.obra.edicao,
+      'Editora': e.obra.editora,
+      'Ano Publicação': e.obra.anoPublicacao,
+      'Assunto 1': e.obra.assunto1,
+      'Assunto 2': e.obra.assunto2,
+      'Assunto 3': e.obra.assunto3,
+      'Coleção': e.obra.colecao,
+      'Tombo': e.tombo,
+      'Status': e.status,
     }))
   }
 
@@ -122,7 +118,7 @@ export class RelatorioService {
     const rows = await prisma.emprestimo.findMany({
       include: {
         usuario: { select: { numeroCadastro: true, nomeCompleto: true } },
-        acervo: { select: { numeroExemplar: true, titulo: true } },
+        exemplar: { include: { obra: { select: { titulo: true } } } },
       },
       orderBy: { dataEmprestimo: 'desc' },
     })
@@ -130,8 +126,8 @@ export class RelatorioService {
       'ID': e.id,
       'Nº Cadastro': e.usuario.numeroCadastro,
       'Membro': e.usuario.nomeCompleto,
-      'Nº Exemplar': e.acervo.numeroExemplar,
-      'Título': e.acervo.titulo,
+      'Cód. Exemplar': e.exemplar.codigoExemplar,
+      'Título': e.exemplar.obra.titulo,
       'Data Empréstimo': e.dataEmprestimo,
       'Previsão Devolução': e.dataPrevistaDevolucao,
       'Data Devolução': e.dataDevolucao,

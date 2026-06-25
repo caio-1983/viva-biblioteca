@@ -22,7 +22,7 @@ export default function CadastroAcervoPage() {
     autor: '',
     edicao: '',
     editora: '',
-    dataPublicacao: '',
+    anoPublicacao: '',
     tombo: '',
     assunto1: '',
     assunto2: '',
@@ -44,9 +44,7 @@ export default function CadastroAcervoPage() {
     try {
       const payload = {
         ...formData,
-        dataPublicacao: formData.dataPublicacao
-          ? new Date(formData.dataPublicacao).toISOString()
-          : null,
+        anoPublicacao: formData.anoPublicacao ? Number(formData.anoPublicacao) : null,
       }
 
       const response = await fetch('/api/acervo', {
@@ -167,13 +165,16 @@ export default function CadastroAcervoPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="dataPublicacao">Ano de Publicação</Label>
+                    <Label htmlFor="anoPublicacao">Ano de Publicação</Label>
                     <Input
-                      id="dataPublicacao"
-                      name="dataPublicacao"
-                      type="date"
-                      value={formData.dataPublicacao}
+                      id="anoPublicacao"
+                      name="anoPublicacao"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={formData.anoPublicacao}
                       onChange={handleChange}
+                      placeholder="Ex: 2024"
                     />
                   </div>
                 </div>

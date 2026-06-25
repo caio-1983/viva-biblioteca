@@ -9,7 +9,7 @@ export const ExemplarCreateSchema = z.object({
   autor: z.string().optional().nullable(),
   edicao: z.string().optional().nullable(),
   editora: z.string().optional().nullable(),
-  dataPublicacao: z.coerce.date().optional().nullable(),
+  anoPublicacao: z.coerce.number().int().optional().nullable(),
   tombo: z.string().optional().nullable(),
   assunto1: z.string().optional().nullable(),
   assunto2: z.string().optional().nullable(),
@@ -19,8 +19,6 @@ export const ExemplarCreateSchema = z.object({
 })
 
 // Status oficiais conforme ADR-008. Espelha o enum StatusExemplar do Prisma.
-// O valor não-oficial INDISPONIVEL foi removido — nenhum dado real o utiliza e
-// ele não consta do ADR-008.
 const StatusExemplarSchema = z.enum([
   'DISPONIVEL',
   'EMPRESTADO',
@@ -32,6 +30,7 @@ const StatusExemplarSchema = z.enum([
 
 export const ExemplarUpdateSchema = ExemplarCreateSchema.partial().extend({
   status: StatusExemplarSchema.optional(),
+  ativo: z.boolean().optional(),
 })
 
 export type ExemplarCreate = z.infer<typeof ExemplarCreateSchema>

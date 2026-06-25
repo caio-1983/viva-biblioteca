@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
         autor: baseData.autor || null,
         edicao: baseData.edicao || null,
         editora: baseData.editora || null,
-        dataPublicacao: baseData.dataPublicacao ? new Date(baseData.dataPublicacao) : null,
+        anoPublicacao: baseData.anoPublicacao ? Number(baseData.anoPublicacao) : null,
         tombo: baseData.tombo || null,
         assunto1: baseData.assunto1 || null,
         assunto2: baseData.assunto2 || null,

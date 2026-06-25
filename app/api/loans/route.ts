@@ -1,22 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { emprestimoService } from '@/src/services/emprestimo.service'
+import { EmprestimoCreateSchema } from '@/src/types/emprestimo'
+import { toEmprestimoListItemDTO } from '@/src/dto/emprestimo.dto'
 
 export async function GET() {
   try {
     const emprestimos = await emprestimoService.listar()
-    // Achata a estrutura aninhada do Prisma para o formato esperado pelo frontend
-    const result = emprestimos.map((e) => ({
-      id: e.id,
-      dataEmprestimo: e.dataEmprestimo,
-      dataPrevistaDevolucao: e.dataPrevistaDevolucao,
-      dataDevolucao: e.dataDevolucao,
-      status: e.status,
-      nomeCompleto: e.usuario.nomeCompleto,
-      numeroCadastro: e.usuario.numeroCadastro,
-      titulo: e.acervo.titulo,
-      numeroExemplar: e.acervo.numeroExemplar,
-    }))
-    return NextResponse.json(result)
+    return NextResponse.json(emprestimos.map(toEmprestimoListItemDTO))
   } catch (error) {
     console.error('Erro ao buscar empréstimos:', error)
     return NextResponse.json({ error: 'Erro ao buscar empréstimos' }, { status: 500 })
@@ -26,22 +16,16 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { usuarioId, acervoId, dataEmprestimo, dataPrevistaDevolucao } = body
+    const parsed = EmprestimoCreateSchema.safeParse(body)
 
-    if (!usuarioId || !acervoId || !dataPrevistaDevolucao) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'usuarioId, acervoId e dataPrevistaDevolucao são obrigatórios' },
+        { error: 'Dados inválidos', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
 
-    const emprestimo = await emprestimoService.registrar({
-      usuarioId: Number(usuarioId),
-      acervoId: Number(acervoId),
-      dataEmprestimo: dataEmprestimo ? new Date(dataEmprestimo) : undefined,
-      dataPrevistaDevolucao: new Date(dataPrevistaDevolucao),
-    })
-
+    const emprestimo = await emprestimoService.registrar(parsed.data)
     return NextResponse.json(emprestimo, { status: 201 })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro ao registrar empréstimo'

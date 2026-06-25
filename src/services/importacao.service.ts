@@ -22,7 +22,7 @@ const COLUMN_MAPPING: Record<string, keyof ExemplarCreate> = {
   'Subtítulo': 'subtitulo',
   Autor: 'autor',
   Edição: 'edicao',
-  Ano: 'dataPublicacao',
+  Ano: 'anoPublicacao',
   Editora: 'editora',
   Tombo: 'tombo',
   Classificação: 'classificacao',
@@ -31,11 +31,10 @@ const COLUMN_MAPPING: Record<string, keyof ExemplarCreate> = {
   ISBN: 'isbn',
 }
 
-function parseYear(yearStr: string): Date | null {
+function parseYear(yearStr: string): number | null {
   if (!yearStr) return null
   const year = parseInt(yearStr, 10)
-  if (isNaN(year)) return null
-  return new Date(`${year}-01-01`)
+  return isNaN(year) ? null : year
 }
 
 function parseCSV(content: string): CsvRow[] {
@@ -73,7 +72,7 @@ function mapRowToExemplar(row: CsvRow): ExemplarCreate {
     assunto2: null,
     assunto3: null,
     colecao: null,
-    dataPublicacao: row.Ano ? parseYear(row.Ano) : null,
+    anoPublicacao: row.Ano ? parseYear(row.Ano) : null,
   }
 }
 

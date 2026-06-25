@@ -17,14 +17,20 @@ import {
   AlertCircle,
   Clock,
   ArrowLeft,
+  X,
 } from 'lucide-react'
+
+interface UserResult {
+  id: number
+  numeroCadastro: string
+  nomeCompleto: string
+}
 
 interface EmprestimoAtivo {
   emprestimoId: number
-  acervoId: number
-  numeroExemplar: string
+  exemplarId: number
+  codigoExemplar: string
   titulo: string
-  autor?: string | null
   usuarioId: number
   nomeCompleto: string
   numeroCadastro: string
@@ -35,13 +41,14 @@ interface EmprestimoAtivo {
 // Empréstimo como retornado pelo endpoint /api/usuarios/[id]/emprestimos
 interface EmprestimoUsuario {
   id: number
+  exemplarId: number
   dataEmprestimo: string
   dataPrevistaDevolucao: string
   dataDevolucao: string | null
   status: string
   titulo: string
   autor: string | null
-  numeroExemplar: string
+  codigoExemplar: string
 }
 
 function formatDate(str: string): string {
@@ -94,15 +101,10 @@ function UserLoansView({
     setReturning(e.id)
     setError(null)
     try {
-      // Busca o acervoId pelo numeroExemplar
-      const booksRes = await fetch('/api/books')
-      const books: { id: number; numeroExemplar: string }[] = await booksRes.json()
-      const book = books.find((b) => b.numeroExemplar === e.numeroExemplar)
-
       const res = await fetch('/api/returns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emprestimoId: e.id, acervoId: book?.id }),
+        body: JSON.stringify({ emprestimoId: e.id, exemplarId: e.exemplarId }),
       })
 
       if (!res.ok) {
@@ -176,7 +178,7 @@ function UserLoansView({
               <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold text-green-700 dark:text-green-300">{e.titulo}</p>
-                <p className="font-mono text-xs text-green-600/70 dark:text-green-400/60">{e.numeroExemplar} · Devolvido · exemplar agora DISPONÍVEL</p>
+                <p className="font-mono text-xs text-green-600/70 dark:text-green-400/60">{e.codigoExemplar} · Devolvido · exemplar agora DISPONÍVEL</p>
               </div>
             </div>
           ))}
@@ -213,7 +215,7 @@ function UserLoansView({
                     </span>
                   </div>
                   <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
-                    <span className="font-mono">{e.numeroExemplar}</span>
+                    <span className="font-mono">{e.codigoExemplar}</span>
                     <span>Empréstimo: {formatDate(e.dataEmprestimo)}</span>
                     <span>Previsto: {formatDate(e.dataPrevistaDevolucao)}</span>
                   </div>
@@ -274,10 +276,10 @@ function ExemplarSearchView() {
       const res = await fetch('/api/returns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emprestimoId: emprestimo.emprestimoId, acervoId: emprestimo.acervoId }),
+        body: JSON.stringify({ emprestimoId: emprestimo.emprestimoId, exemplarId: emprestimo.exemplarId }),
       })
       if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? 'Erro') }
-      setSuccess({ titulo: emprestimo.titulo, exemplar: emprestimo.numeroExemplar })
+      setSuccess({ titulo: emprestimo.titulo, exemplar: emprestimo.codigoExemplar })
       setEmprestimo(null)
       setExemplar('')
     } catch (err) {
@@ -362,7 +364,7 @@ function ExemplarSearchView() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div><p className="text-xs text-muted-foreground">Número</p><p className="font-mono font-semibold">{emprestimo.numeroExemplar}</p></div>
+                <div><p className="text-xs text-muted-foreground">Número</p><p className="font-mono font-semibold">{emprestimo.codigoExemplar}</p></div>
                 <div><p className="text-xs text-muted-foreground">Título</p><p className="font-semibold leading-snug">{emprestimo.titulo}</p></div>
               </CardContent>
             </Card>
@@ -404,7 +406,7 @@ function ExemplarSearchView() {
 
           <div className="flex items-center justify-end gap-3 rounded-xl border border-border bg-muted/20 px-6 py-4">
             <p className="flex-1 text-sm text-muted-foreground">
-              Confirme a devolução de <span className="font-mono font-semibold text-foreground">{emprestimo.numeroExemplar}</span>. O status será alterado para <span className="font-semibold text-green-600">DISPONÍVEL</span>.
+              Confirme a devolução de <span className="font-mono font-semibold text-foreground">{emprestimo.codigoExemplar}</span>. O status será alterado para <span className="font-semibold text-green-600">DISPONÍVEL</span>.
             </p>
             <Button onClick={handleDevolver} disabled={loading} className="gap-2 bg-green-600 text-white hover:bg-green-700">
               <RotateCcw className="h-4 w-4" />
@@ -417,7 +419,130 @@ function ExemplarSearchView() {
   )
 }
 
+// ─── Busca por usuário ────────────────────────────────────────────────────────
+
+function UserSearchView() {
+  const [search, setSearch] = useState('')
+  const [results, setResults] = useState<UserResult[]>([])
+  const [searching, setSearching] = useState(false)
+  const [selected, setSelected] = useState<UserResult | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (selected) return
+    if (search.trim().length < 2) { setResults([]); return }
+    const timer = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const res = await fetch('/api/usuarios')
+        if (res.ok) {
+          const all: UserResult[] = await res.json()
+          const q = search.toLowerCase()
+          setResults(all.filter((u) => u.nomeCompleto.toLowerCase().includes(q)).slice(0, 8))
+        }
+      } finally { setSearching(false) }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [search, selected])
+
+  const selectUser = (u: UserResult) => {
+    setSelected(u)
+    setResults([])
+    setSearch(u.nomeCompleto)
+  }
+
+  const clearUser = () => {
+    setSelected(null)
+    setSearch('')
+    setResults([])
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20">
+              <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-semibold">Buscar Usuário</CardTitle>
+              <CardDescription>Digite o nome para localizar os empréstimos ativos</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <Input
+                ref={inputRef}
+                className="pl-9 pr-9"
+                placeholder="Nome do usuário..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); if (selected) setSelected(null) }}
+                disabled={!!selected}
+                autoFocus
+              />
+              {(search || selected) && (
+                <button
+                  onClick={clearUser}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Limpar"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {results.length > 0 && !selected && (
+              <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg">
+                {searching && (
+                  <div className="px-3 py-2 text-xs text-muted-foreground">Buscando...</div>
+                )}
+                {results.map((u) => (
+                  <button
+                    key={u.id}
+                    onClick={() => selectUser(u)}
+                    className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-accent transition-colors first:rounded-t-lg last:rounded-b-lg"
+                  >
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/20">
+                      <User className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{u.nomeCompleto}</p>
+                      <p className="font-mono text-xs text-muted-foreground">{u.numeroCadastro}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {search.trim().length >= 2 && !searching && results.length === 0 && !selected && (
+              <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-popover px-3 py-3 shadow-lg">
+                <p className="text-sm text-muted-foreground">Nenhum usuário encontrado para <span className="font-medium text-foreground">"{search}"</span></p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {selected && (
+        <UserLoansView
+          userId={selected.id}
+          userName={selected.nomeCompleto}
+          numeroCadastro={selected.numeroCadastro}
+          onBack={clearUser}
+        />
+      )}
+    </div>
+  )
+}
+
 // ─── Componente raiz ──────────────────────────────────────────────────────────
+
+type Mode = 'exemplar' | 'usuario'
 
 export function ReturnsForm() {
   const router = useRouter()
@@ -427,6 +552,9 @@ export function ReturnsForm() {
   const nome   = params.get('nome') ?? ''
   const cadastro = params.get('cadastro') ?? ''
 
+  const [mode, setMode] = useState<Mode>('exemplar')
+
+  // navegação via URL param (ex: vindo da lista de usuários)
   if (userId) {
     return (
       <UserLoansView
@@ -438,5 +566,37 @@ export function ReturnsForm() {
     )
   }
 
-  return <ExemplarSearchView />
+  return (
+    <div className="space-y-6">
+      {/* Toggle de modo */}
+      <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/30 p-1 w-fit">
+        <button
+          onClick={() => setMode('exemplar')}
+          className={cn(
+            'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
+            mode === 'exemplar'
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <BookOpen className="h-4 w-4" />
+          Nº do Exemplar
+        </button>
+        <button
+          onClick={() => setMode('usuario')}
+          className={cn(
+            'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
+            mode === 'usuario'
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <User className="h-4 w-4" />
+          Nome do Usuário
+        </button>
+      </div>
+
+      {mode === 'exemplar' ? <ExemplarSearchView /> : <UserSearchView />}
+    </div>
+  )
 }
