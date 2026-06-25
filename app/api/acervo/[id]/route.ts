@@ -36,7 +36,7 @@ export async function PUT(
     const validation = validateAcervoUpdate(body)
 
     if (!validation.valid || !validation.data) {
-      return NextResponse.json({ error: validation.errors }, { status: 400 })
+      return NextResponse.json({ error: 'Dados inválidos', details: validation.errors }, { status: 400 })
     }
 
     const acervo = await acervoService.updateAcervo(id, validation.data)

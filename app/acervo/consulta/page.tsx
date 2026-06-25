@@ -13,6 +13,7 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
+  X,
 } from 'lucide-react'
 
 interface Acervo {
@@ -23,6 +24,30 @@ interface Acervo {
   classificacao: string | null
   status: string
   ativo: boolean
+}
+
+interface AcervoDetalhado {
+  id: number
+  numeroExemplar: string
+  tipoPublicacao: string | null
+  isbn: string | null
+  classificacao: string | null
+  titulo: string
+  subtitulo: string | null
+  autor: string | null
+  edicao: string | null
+  editora: string | null
+  dataPublicacao: string | null
+  tombo: string | null
+  assunto1: string | null
+  assunto2: string | null
+  assunto3: string | null
+  colecao: string | null
+  observacao: string | null
+  status: string
+  ativo: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 interface ListResponse {
@@ -43,6 +68,8 @@ function ConsultaContent() {
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [pages, setPages] = useState(0)
+  const [selectedAcervo, setSelectedAcervo] = useState<AcervoDetalhado | null>(null)
+  const [modalLoading, setModalLoading] = useState(false)
 
   const fetchAcervos = useCallback(async () => {
     setLoading(true)
@@ -89,6 +116,28 @@ function ConsultaContent() {
     } catch (error) {
       console.error('Erro ao deletar:', error)
     }
+  }
+
+  const openModal = async (id: number) => {
+    setModalLoading(true)
+    setSelectedAcervo(null)
+    try {
+      const response = await fetch(`/api/acervo/${id}`)
+      const data: AcervoDetalhado = await response.json()
+      setSelectedAcervo(data)
+    } catch (error) {
+      console.error('Erro ao carregar detalhes:', error)
+    } finally {
+      setModalLoading(false)
+    }
+  }
+
+  const closeModal = () => setSelectedAcervo(null)
+
+  const statusLabel: Record<string, string> = {
+    DISPONIVEL: 'Disponível',
+    EMPRESTADO: 'Emprestado',
+    RESERVADO: 'Reservado',
   }
 
   return (
@@ -168,7 +217,7 @@ function ConsultaContent() {
               <thead className="border-b border-border bg-muted/50">
                 <tr>
                   <th className="px-6 py-4 text-left font-semibold text-foreground">
-                    Número
+                    Exemplar
                   </th>
                   <th className="px-6 py-4 text-left font-semibold text-foreground">
                     Título
@@ -209,8 +258,13 @@ function ConsultaContent() {
                       <td className="px-6 py-4 font-mono text-xs font-semibold text-foreground">
                         {acervo.numeroExemplar}
                       </td>
-                      <td className="px-6 py-4 text-foreground max-w-xs truncate">
-                        {acervo.titulo}
+                      <td className="px-6 py-4 max-w-xs truncate">
+                        <button
+                          onClick={() => openModal(acervo.id)}
+                          className="text-primary hover:underline text-left truncate block w-full font-medium"
+                        >
+                          {acervo.titulo}
+                        </button>
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
                         {acervo.autor || '—'}
@@ -236,6 +290,7 @@ function ConsultaContent() {
                           <button
                             className="p-1 hover:bg-muted rounded transition-colors"
                             title="Visualizar"
+                            onClick={() => openModal(acervo.id)}
                           >
                             <Eye className="h-4 w-4 text-muted-foreground" />
                           </button>
@@ -287,6 +342,159 @@ function ConsultaContent() {
           )}
         </Card>
       </div>
+
+      {/* Modal de Detalhes */}
+      {(selectedAcervo || modalLoading) && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={closeModal}
+        >
+          <div
+            className="bg-background rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {modalLoading ? (
+              <div className="p-10 text-center text-muted-foreground">
+                Carregando detalhes...
+              </div>
+            ) : selectedAcervo && (
+              <>
+                {/* Modal Header */}
+                <div className="flex items-start justify-between p-6 border-b border-border">
+                  <div>
+                    <h2 className="text-xl font-bold text-foreground leading-tight">
+                      {selectedAcervo.titulo}
+                    </h2>
+                    {selectedAcervo.subtitulo && (
+                      <p className="text-sm text-muted-foreground mt-1">{selectedAcervo.subtitulo}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={closeModal}
+                    className="ml-4 p-1 hover:bg-muted rounded-lg transition-colors shrink-0"
+                  >
+                    <X className="h-5 w-5 text-muted-foreground" />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6 space-y-6">
+                  {/* Status badge */}
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                        selectedAcervo.status === 'DISPONIVEL'
+                          ? 'bg-green-100 text-green-800'
+                          : selectedAcervo.status === 'EMPRESTADO'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {statusLabel[selectedAcervo.status] ?? selectedAcervo.status}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-mono">
+                      Nº {selectedAcervo.numeroExemplar}
+                    </span>
+                    {selectedAcervo.tombo && (
+                      <span className="text-xs text-muted-foreground">
+                        Tombo: {selectedAcervo.tombo}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Identificação */}
+                  <section>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                      Identificação
+                    </h3>
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                      <Field label="Tipo de Publicação" value={selectedAcervo.tipoPublicacao} />
+                      <Field label="ISBN" value={selectedAcervo.isbn} />
+                      <Field label="Classificação" value={selectedAcervo.classificacao} />
+                      <Field label="Coleção" value={selectedAcervo.colecao} />
+                    </div>
+                  </section>
+
+                  {/* Publicação */}
+                  <section>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                      Publicação
+                    </h3>
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                      <Field label="Autor" value={selectedAcervo.autor} />
+                      <Field label="Editora" value={selectedAcervo.editora} />
+                      <Field label="Edição" value={selectedAcervo.edicao} />
+                      <Field
+                        label="Ano de Publicação"
+                        value={
+                          selectedAcervo.dataPublicacao
+                            ? new Date(selectedAcervo.dataPublicacao).getFullYear().toString()
+                            : null
+                        }
+                      />
+                    </div>
+                  </section>
+
+                  {/* Assuntos */}
+                  {(selectedAcervo.assunto1 || selectedAcervo.assunto2 || selectedAcervo.assunto3) && (
+                    <section>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                        Assuntos
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {[selectedAcervo.assunto1, selectedAcervo.assunto2, selectedAcervo.assunto3]
+                          .filter(Boolean)
+                          .map((assunto, i) => (
+                            <span
+                              key={i}
+                              className="px-3 py-1 bg-muted rounded-full text-xs text-foreground"
+                            >
+                              {assunto}
+                            </span>
+                          ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Observação */}
+                  {selectedAcervo.observacao && (
+                    <section>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                        Observação
+                      </h3>
+                      <p className="text-sm text-foreground whitespace-pre-wrap">
+                        {selectedAcervo.observacao}
+                      </p>
+                    </section>
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="px-6 py-4 border-t border-border flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={closeModal}>
+                    Fechar
+                  </Button>
+                  <Link href={`/acervo/cadastro?edit=${selectedAcervo.id}`}>
+                    <Button size="sm" className="flex items-center gap-2">
+                      <Edit className="h-4 w-4" />
+                      Editar
+                    </Button>
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Field({ label, value }: { label: string; value: string | null | undefined }) {
+  return (
+    <div>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="font-medium text-foreground mt-0.5">{value || '—'}</dd>
     </div>
   )
 }

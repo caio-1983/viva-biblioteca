@@ -18,7 +18,10 @@ export const AcervoCreateSchema = z.object({
   observacao: z.string().optional().nullable(),
 })
 
-export const AcervoUpdateSchema = AcervoCreateSchema.partial()
+export const AcervoUpdateSchema = AcervoCreateSchema.partial().extend({
+  status: z.enum(['DISPONIVEL', 'EMPRESTADO', 'EXTRAVIADO', 'INDISPONIVEL']).optional(),
+  dataPublicacao: z.coerce.date().optional().nullable(),
+})
 
 export const AcervoSchema = z.object({
   id: z.number(),
@@ -38,7 +41,7 @@ export const AcervoSchema = z.object({
   assunto3: z.string().nullable(),
   colecao: z.string().nullable(),
   observacao: z.string().nullable(),
-  status: z.enum(['DISPONIVEL', 'EMPRESTADO', 'EXTRAVIADO', 'BAIXADO', 'MANUTENCAO']),
+  status: z.enum(['DISPONIVEL', 'EMPRESTADO', 'EXTRAVIADO', 'INDISPONIVEL', 'BAIXADO', 'MANUTENCAO']),
   ativo: z.boolean(),
   createdAt: z.date(),
   updatedAt: z.date(),
