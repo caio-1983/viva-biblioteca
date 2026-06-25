@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Database from 'better-sqlite3'
-import path from 'path'
-
-const DB_PATH = path.join(process.cwd(), 'storage', 'database', 'biblioteca.db')
+import { emprestimoService } from '@/src/services/emprestimo.service'
 
 export async function GET(
   _request: NextRequest,
@@ -10,26 +7,21 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const db = new Database(DB_PATH, { readonly: true })
+    const emprestimos = await emprestimoService.buscarPorLeitor(Number(id))
 
-    const emprestimos = db.prepare(`
-      SELECT
-        e.id,
-        e.dataEmprestimo,
-        e.dataPrevistaDevolucao,
-        e.dataDevolucao,
-        e.status,
-        a.titulo,
-        a.autor,
-        a.numeroExemplar
-      FROM Emprestimo e
-      JOIN Acervo a ON a.id = e.acervoId
-      WHERE e.usuarioId = ?
-      ORDER BY e.dataEmprestimo DESC
-    `).all(Number(id))
+    // Achata estrutura aninhada para manter contrato com o frontend
+    const result = emprestimos.map((e) => ({
+      id: e.id,
+      dataEmprestimo: e.dataEmprestimo,
+      dataPrevistaDevolucao: e.dataPrevistaDevolucao,
+      dataDevolucao: e.dataDevolucao,
+      status: e.status,
+      titulo: e.acervo.titulo,
+      autor: e.acervo.autor,
+      numeroExemplar: e.acervo.numeroExemplar,
+    }))
 
-    db.close()
-    return NextResponse.json(emprestimos)
+    return NextResponse.json(result)
   } catch (error) {
     console.error('Erro ao buscar empréstimos do usuário:', error)
     return NextResponse.json({ error: 'Erro ao buscar histórico' }, { status: 500 })
