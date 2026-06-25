@@ -53,7 +53,6 @@ model Acervo {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  emprestimos         Emprestimo[]
 }
 
 // ============================================
@@ -81,22 +80,17 @@ model Usuario {
 model Emprestimo {
   id                      Int     @id @default(autoincrement())
   usuarioId               Int
-  acervoId                Int
-  // exemplarId adicionado na Fase 1b (aditivo, nullable); será NOT NULL na Fase 2 (Passo 6)
-  // após Scripts 01–03 e validação completa do Script 04
-  exemplarId              Int?
+  exemplarId              Int
   dataEmprestimo          DateTime @default(now())
   dataPrevistaDevolucao   DateTime
   dataDevolucao           DateTime?
   status                  StatusEmprestimo @default(ATIVO)
   createdAt               DateTime @default(now())
 
-  usuario                 Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
-  acervo                  Acervo    @relation(fields: [acervoId], references: [id], onDelete: Restrict)
-  exemplar                Exemplar? @relation(fields: [exemplarId], references: [id], onDelete: Restrict)
+  usuario                 Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  exemplar                Exemplar @relation(fields: [exemplarId], references: [id], onDelete: Restrict)
 
   @@index([usuarioId])
-  @@index([acervoId])
   @@index([exemplarId])
   @@index([dataEmprestimo])
 }
