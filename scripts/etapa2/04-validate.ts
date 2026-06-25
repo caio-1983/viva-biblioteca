@@ -182,25 +182,39 @@ async function main(): Promise<void> {
     },
   ))
 
-  // ── A10–A11: Integridade dos Empréstimos — coluna obrigatória neste ponto ──
-  // exemplarId foi adicionado pela migration etapa2_fase1b; não deve ser opcional aqui.
-  // Se a coluna não existir, a migration não foi aplicada — bloqueante.
+  // ── A10–A11: Integridade dos Empréstimos ────────────────────────────────────
+  // A10 detecta a fase em vigor via pragma_table_info:
+  //   Fase 1 (notnull=0): exemplarId é nullable — verifica que não há NULLs via SQL raw.
+  //   Fase 2 (notnull=1): exemplarId é NOT NULL — a restrição já é garantida pelo schema;
+  //                       a validação é considerada automaticamente satisfeita.
   assertions.push(await assert(
     'A10: Emprestimo.exemplarId preenchido em 100% dos registros',
     async () => {
-      const colCheck = await prisma.$queryRaw<Array<{ name: string }>>`
-        SELECT name FROM pragma_table_info('Emprestimo') WHERE name='exemplarId'
+      const colInfo = await prisma.$queryRaw<Array<{ name: string; notnull: number }>>`
+        SELECT name, "notnull" FROM pragma_table_info('Emprestimo') WHERE name='exemplarId'
       `
-      if (colCheck.length === 0) {
+      if (colInfo.length === 0) {
         fail('Coluna Emprestimo.exemplarId não existe — aplique a migration etapa2_fase1b primeiro')
       }
-      const pendentes = await prisma.emprestimo.count({ where: { exemplarId: null } })
+      const isFase2 = colInfo[0].notnull === 1
+      if (isFase2) {
+        const total = await prisma.emprestimo.count()
+        return `Fase 2 — NOT NULL garantido pelo schema (${total} empréstimos)`
+      }
+      // Fase 1: campo nullable — usa SQL raw para evitar rejeição do Prisma Client
+      const rows = await prisma.$queryRaw<Array<{ n: number }>>`
+        SELECT COUNT(*) AS n FROM Emprestimo WHERE exemplarId IS NULL
+      `
+      const pendentes = Number(rows[0]?.n ?? 0)
       if (pendentes > 0) fail(`${pendentes} Empréstimo(s) com exemplarId NULL — execute 03-migrate-emprestimos.ts`)
       const total = await prisma.emprestimo.count()
-      return `${total} empréstimos com exemplarId preenchido`
+      return `Fase 1 — ${total} empréstimos com exemplarId preenchido`
     },
   ))
 
+  // A11 é a validação de integridade relevante após a Fase 2: todo exemplarId
+  // deve referenciar um Exemplar existente. A cláusula IS NOT NULL é redundante
+  // na Fase 2, mas preservada para compatibilidade com a Fase 1.
   assertions.push(await assert(
     'A11: Emprestimo.exemplarId referencia Exemplar existente (sem orphans)',
     async () => {
