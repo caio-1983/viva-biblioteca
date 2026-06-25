@@ -256,7 +256,7 @@ export function ReportsView() {
                       borderRadius: '8px',
                       color: '#f1f5f9',
                     }}
-                    formatter={(value: number) => [value, 'Empréstimos']}
+                    formatter={(value) => [Number(value ?? 0), 'Empréstimos']}
                   />
                   <Line
                     type="monotone"
@@ -390,7 +390,7 @@ export function ReportsView() {
                       borderRadius: '8px',
                       color: '#f1f5f9',
                     }}
-                    formatter={(value: number, name: string) => [`${value} exemplares`, name]}
+                    formatter={(value, name) => [`${value ?? 0} exemplares`, String(name ?? '')]}
                   />
                   <Legend
                     verticalAlign="bottom"
