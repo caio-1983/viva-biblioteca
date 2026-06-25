@@ -8,7 +8,15 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "node --loader ts-node/esm prisma/seed.ts",
-    "db:seed:ts": "tsx prisma/seed.ts"
+    "db:seed:ts": "tsx prisma/seed.ts",
+    "migrate:check":      "tsx scripts/etapa2/00-pre-check.ts",
+    "migrate:obras":      "tsx scripts/etapa2/01-migrate-obras.ts",
+    "migrate:exemplares": "tsx scripts/etapa2/02-migrate-exemplares.ts",
+    "migrate:seq":        "tsx scripts/etapa2/02b-seed-sequencia.ts",
+    "migrate:emprestimos":"tsx scripts/etapa2/03-migrate-emprestimos.ts",
+    "migrate:validate":   "tsx scripts/etapa2/04-validate.ts",
+    "migrate:reports":    "tsx scripts/etapa2/05-export-reports.ts",
+    "migrate:rollback":   "tsx scripts/etapa2/rollback.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
@@ -44,6 +52,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5"
   },
   "allowScripts": {
