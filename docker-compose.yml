@@ -1,0 +1,16 @@
+services:
+  biblioteca:
+    build: .
+    container_name: biblioteca
+
+    restart: unless-stopped
+
+    ports:
+      - "3002:3000"
+
+    volumes:
+      - ./storage:/app/storage
+
+    environment:
+      DATABASE_URL: file:./storage/database/biblioteca.db
+      NODE_ENV: production
