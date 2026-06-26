@@ -546,11 +546,13 @@ export function CatalogingWorkspace() {
         title="Catalogação"
         description="Identifique a obra e registre exemplares sem risco de duplicação"
         breadcrumb={
-          <Link href="/acervo/consulta">
-            <Button variant="ghost" size="sm" className="gap-1.5 -ml-2 text-slate-500 hover:text-slate-700">
-              <ArrowLeft className="size-4" /> Catálogo
-            </Button>
-          </Link>
+          <nav className="flex items-center gap-1.5 text-xs text-slate-400">
+            <Link href="/" className="hover:text-slate-600 transition-colors">Dashboard</Link>
+            <span aria-hidden>›</span>
+            <Link href="/acervo/consulta" className="hover:text-slate-600 transition-colors">Catálogo</Link>
+            <span aria-hidden>›</span>
+            <span className="text-slate-600">Nova Obra</span>
+          </nav>
         }
       />
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import Link from 'next/link'
 import {
   Settings, Upload, Users, Tag, HardDrive, ClipboardList, Plug,
   Save, RotateCcw, CheckCircle2, AlertTriangle, Loader2, FileText,
@@ -419,6 +420,13 @@ export function AdminWorkspace() {
       <PageHeader
         title="Administração"
         description="Configurações globais, importações, usuários e integrações do sistema"
+        breadcrumb={
+          <nav className="flex items-center gap-1.5 text-xs text-slate-400">
+            <Link href="/" className="hover:text-slate-600 transition-colors">Dashboard</Link>
+            <span aria-hidden>›</span>
+            <span className="text-slate-600">Administração</span>
+          </nav>
+        }
       />
 
       {/* ── 1. CONFIGURAÇÕES GERAIS ── */}

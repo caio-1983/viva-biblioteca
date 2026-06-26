@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import Link from 'next/link'
 import {
   Search, QrCode, CheckCircle2, AlertTriangle,
   Wrench, AlertOctagon, BookX, Loader2, Boxes,
@@ -431,6 +432,24 @@ function ScanRow({ entry }: { entry: ScanEntry }) {
   )
 }
 
+// ─── Breadcrumb ──────────────────────────────────────────────────────────────
+
+function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
+  return (
+    <nav className="flex items-center gap-1.5 text-xs text-slate-400">
+      {items.map((item, i) => (
+        <span key={i} className="flex items-center gap-1.5">
+          {i > 0 && <span aria-hidden>›</span>}
+          {item.href
+            ? <Link href={item.href} className="hover:text-slate-600 transition-colors">{item.label}</Link>
+            : <span className="text-slate-600">{item.label}</span>
+          }
+        </span>
+      ))}
+    </nav>
+  )
+}
+
 // ─── InventoryWorkspace (main export) ───────────────────────────────────────
 
 export function InventoryWorkspace() {
@@ -564,8 +583,9 @@ export function InventoryWorkspace() {
 
         {/* Header */}
         <PageHeader
-          title="Inventário Patrimonial"
+          title="Inventário"
           description="Conferência e gestão do acervo físico"
+          breadcrumb={<Breadcrumb items={[{ label: 'Dashboard', href: '/' }]} />}
           actions={
             <Button
               variant="outline"

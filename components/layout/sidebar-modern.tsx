@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -21,43 +22,29 @@ interface SidebarProps {
   onClose: () => void
 }
 
-const menuItems = [
-  {
-    label: 'Dashboard',
-    href: '/',
-    icon: LayoutDashboard,
-  },
-  {
-    label: 'Circulação',
-    href: '/circulacao',
-    icon: ArrowLeftRight,
-  },
-  {
-    label: 'Catálogo',
-    href: '/acervo/consulta',
-    icon: BookOpen,
-  },
-  {
-    label: 'Inventário',
-    href: '/inventario',
-    icon: ClipboardList,
-  },
-  {
-    label: 'Leitores',
-    href: '/members',
-    icon: Users,
-  },
-  {
-    label: 'Relatórios',
-    href: '/reports',
-    icon: BarChart3,
-  },
-  {
-    label: 'Administração',
-    href: '/settings',
-    icon: Cog,
-  },
+interface MenuItem {
+  label: string
+  href: string
+  icon: React.ComponentType<{ className?: string }>
+  /** Prefixo de rota que mantém o item ativo em sub-rotas. Default: href. */
+  match?: string
+}
+
+const menuItems: MenuItem[] = [
+  { label: 'Dashboard',     href: '/',                icon: LayoutDashboard                         },
+  { label: 'Circulação',    href: '/circulacao',      icon: ArrowLeftRight                          },
+  { label: 'Catálogo',      href: '/acervo/consulta', icon: BookOpen,    match: '/acervo'           },
+  { label: 'Inventário',    href: '/inventario',      icon: ClipboardList                           },
+  { label: 'Leitores',      href: '/members',         icon: Users                                   },
+  { label: 'Relatórios',    href: '/reports',         icon: BarChart3                               },
+  { label: 'Administração', href: '/settings',        icon: Cog                                     },
 ]
+
+function isRouteActive(pathname: string, item: MenuItem): boolean {
+  const prefix = item.match ?? item.href
+  if (prefix === '/') return pathname === '/'
+  return pathname === item.href || pathname.startsWith(prefix + '/')
+}
 
 export function SidebarModern({ open, onClose }: SidebarProps) {
   const pathname = usePathname()
@@ -82,7 +69,7 @@ export function SidebarModern({ open, onClose }: SidebarProps) {
         <nav className="flex-1 space-y-1 px-4 py-6 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon
-            const isActive = pathname === item.href
+            const isActive = isRouteActive(pathname, item)
 
             return (
               <Link
@@ -139,7 +126,7 @@ export function SidebarModern({ open, onClose }: SidebarProps) {
         <nav className="space-y-1 px-4 py-6">
           {menuItems.map((item) => {
             const Icon = item.icon
-            const isActive = pathname === item.href
+            const isActive = isRouteActive(pathname, item)
 
             return (
               <Link

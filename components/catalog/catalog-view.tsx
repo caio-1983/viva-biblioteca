@@ -501,6 +501,22 @@ const STATUS_QUICK: { value: StatusFilter; label: string }[] = [
 
 const PER_PAGE_OPTIONS = [12, 24, 48] as const
 
+function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
+  return (
+    <nav className="flex items-center gap-1.5 text-xs text-slate-400">
+      {items.map((item, i) => (
+        <span key={i} className="flex items-center gap-1.5">
+          {i > 0 && <span aria-hidden>›</span>}
+          {item.href
+            ? <Link href={item.href} className="hover:text-slate-600 transition-colors">{item.label}</Link>
+            : <span className="text-slate-600">{item.label}</span>
+          }
+        </span>
+      ))}
+    </nav>
+  )
+}
+
 export function CatalogView() {
   const router = useRouter()
 
@@ -546,7 +562,11 @@ export function CatalogView() {
   if (loading) {
     return (
       <div className="space-y-6 pb-12">
-        <PageHeader title="Catálogo" description="Carregando acervo..." />
+        <PageHeader
+          title="Catálogo"
+          description="Carregando acervo..."
+          breadcrumb={<Breadcrumb items={[{ label: 'Dashboard', href: '/' }]} />}
+        />
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
           {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
@@ -557,7 +577,10 @@ export function CatalogView() {
   if (error) {
     return (
       <div className="space-y-6 pb-12">
-        <PageHeader title="Catálogo" />
+        <PageHeader
+          title="Catálogo"
+          breadcrumb={<Breadcrumb items={[{ label: 'Dashboard', href: '/' }]} />}
+        />
         <EmptyState
           title="Não foi possível carregar o catálogo"
           description="Verifique a conexão com o servidor e tente novamente."
@@ -579,6 +602,7 @@ export function CatalogView() {
       {/* ── Cabeçalho ───────────────────────────────────────────────────── */}
       <PageHeader
         title="Catálogo"
+        breadcrumb={<Breadcrumb items={[{ label: 'Dashboard', href: '/' }]} />}
         description={
           allObras.length === 0
             ? 'Nenhuma obra cadastrada'

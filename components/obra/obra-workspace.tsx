@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useRouter }    from 'next/navigation'
 import Link             from 'next/link'
+import { usePageTitle } from '@/components/page-context'
 import {
   ArrowLeft, Plus, Pencil, BookOpen, BookMarked, Archive,
   CheckCircle, Clock, Wrench, Search, AlertTriangle,
@@ -889,10 +890,29 @@ function AddExemplarDrawer({ open, onClose, obra }: {
   )
 }
 
+// ── Breadcrumb ────────────────────────────────────────────────────────────────
+
+function ObraBreadcrumb({ titulo }: { titulo?: string }) {
+  return (
+    <nav className="flex items-center gap-1.5 text-xs text-slate-400">
+      <Link href="/" className="hover:text-slate-600 transition-colors">Dashboard</Link>
+      <span aria-hidden>›</span>
+      <Link href="/acervo/consulta" className="hover:text-slate-600 transition-colors">Catálogo</Link>
+      {titulo && (
+        <>
+          <span aria-hidden>›</span>
+          <span className="text-slate-600 truncate max-w-[200px]">{titulo}</span>
+        </>
+      )}
+    </nav>
+  )
+}
+
 // ── ObraWorkspace ─────────────────────────────────────────────────────────────
 
 export function ObraWorkspace({ obraId }: { obraId: number }) {
   const router = useRouter()
+  const { setPageInfo } = usePageTitle()
 
   const [exemplares,    setExemplares]    = useState<ExemplarDTO[]>([])
   const [loans,         setLoans]         = useState<LoanDTO[]>([])
@@ -905,6 +925,10 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
   const [statusFilter,  setStatusFilter]  = useState<string>('TODOS')
 
   const obra = exemplares[0]
+
+  useEffect(() => {
+    if (obra) setPageInfo(obra.titulo, obra.autor ?? 'Catálogo')
+  }, [obra, setPageInfo])
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
@@ -984,11 +1008,7 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
         <PageHeader
           title="Carregando..."
           breadcrumb={
-            <Link href="/acervo/consulta">
-              <Button variant="ghost" size="sm" className="gap-1.5 -ml-2 text-slate-500">
-                <ArrowLeft className="size-4" /> Catálogo
-              </Button>
-            </Link>
+            <ObraBreadcrumb />
           }
         />
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
@@ -1003,13 +1023,7 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
       <div className="space-y-6 pb-12">
         <PageHeader
           title="Obra não encontrada"
-          breadcrumb={
-            <Link href="/acervo/consulta">
-              <Button variant="ghost" size="sm" className="gap-1.5 -ml-2 text-slate-500">
-                <ArrowLeft className="size-4" /> Catálogo
-              </Button>
-            </Link>
-          }
+          breadcrumb={<ObraBreadcrumb />}
         />
         <EmptyState
           icon={<BookOpen className="size-8 text-slate-200" />}
@@ -1037,14 +1051,7 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
         <PageHeader
           title={obra.titulo}
           description={[obra.autor, obra.editora, obra.anoPublicacao].filter(Boolean).join(' · ')}
-          breadcrumb={
-            <Link href="/acervo/consulta">
-              <Button variant="ghost" size="sm" className="gap-1.5 -ml-2 text-slate-500 hover:text-slate-700">
-                <ArrowLeft className="size-4" />
-                Catálogo
-              </Button>
-            </Link>
-          }
+          breadcrumb={<ObraBreadcrumb titulo={obra.titulo} />}
           actions={
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" className="gap-1.5" onClick={loadData}>
