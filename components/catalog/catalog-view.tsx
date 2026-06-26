@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, memo } from 'react'
 import { useRouter }   from 'next/navigation'
 import Link             from 'next/link'
 import {
@@ -22,6 +22,7 @@ import { Drawer }           from '@/components/ui/drawer'
 import { Input }            from '@/components/ui/input'
 import { EmptyState }       from '@/components/ui/empty-state'
 import { SkeletonCard }     from '@/components/ui/loading-state'
+import { usePageTitle }     from '@/components/page-context'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -181,7 +182,7 @@ const COVER_PALETTES = [
   'bg-rose-50 text-rose-600 border-rose-100',
 ]
 
-function CoverPlaceholder({ titulo, obraId }: { titulo: string; obraId: number }) {
+const CoverPlaceholder = memo(function CoverPlaceholder({ titulo, obraId }: { titulo: string; obraId: number }) {
   const palette = COVER_PALETTES[obraId % COVER_PALETTES.length]
   return (
     <div className={cn(
@@ -191,24 +192,20 @@ function CoverPlaceholder({ titulo, obraId }: { titulo: string; obraId: number }
       <span className="text-base font-bold">{titulo[0]?.toUpperCase() ?? '?'}</span>
     </div>
   )
-}
+})
 
 // ── BookCard ──────────────────────────────────────────────────────────────────
 
-function BookCard({
-  obra, onOpen, onNewLoan,
-}: {
-  obra: ObraCard
-  onOpen: () => void
-  onNewLoan: () => void
-}) {
+const BookCard = memo(function BookCard({ obra }: { obra: ObraCard }) {
+  const router  = useRouter()
   const status  = deriveStatus(obra)
   const assuntos = [obra.assunto1, obra.assunto2, obra.assunto3].filter(Boolean) as string[]
+  const href    = `/acervo/obra/${obra.obraId}`
 
   return (
     <Card
       className="border border-border/60 bg-white shadow-none hover:shadow-sm hover:border-brand-200 transition-all cursor-pointer group"
-      onClick={onOpen}
+      onClick={() => router.push(href)}
     >
       <CardContent className="p-4">
         <div className="flex gap-3">
@@ -239,12 +236,12 @@ function BookCard({
                       {
                         label: 'Abrir obra',
                         icon:  <BookOpen className="size-4" />,
-                        onClick: onOpen,
+                        onClick: () => router.push(href),
                       },
                       {
                         label:    'Novo empréstimo',
                         icon:     <BookMarked className="size-4" />,
-                        onClick:  onNewLoan,
+                        onClick:  () => router.push('/circulacao'),
                         disabled: obra.disponiveis === 0,
                       },
                     ]}
@@ -340,7 +337,7 @@ function BookCard({
                 size="sm"
                 variant="ghost"
                 className="gap-1 text-slate-400 hover:text-brand-600 shrink-0 h-7 px-2"
-                onClick={e => { e.stopPropagation(); onOpen() }}
+                onClick={e => { e.stopPropagation(); router.push(href) }}
               >
                 Abrir
                 <ArrowRight className="size-3" />
@@ -351,7 +348,7 @@ function BookCard({
       </CardContent>
     </Card>
   )
-}
+})
 
 // ── FilterDrawer ──────────────────────────────────────────────────────────────
 
@@ -518,7 +515,7 @@ function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
 }
 
 export function CatalogView() {
-  const router = useRouter()
+  const { setPageInfo } = usePageTitle()
 
   const [allObras,    setAllObras]    = useState<ObraCard[]>([])
   const [loading,     setLoading]     = useState(true)
@@ -530,16 +527,22 @@ export function CatalogView() {
   const [perPage,     setPerPage]     = useState<24 | 12 | 48>(24)
   const [drawerOpen,  setDrawerOpen]  = useState(false)
 
+  useEffect(() => {
+    setPageInfo('Catálogo', 'Acervo de obras e exemplares')
+  }, [setPageInfo])
+
   // Buscar todos os exemplares na montagem
   useEffect(() => {
-    fetch('/api/acervo?limit=500')
+    const ctrl = new AbortController()
+    fetch('/api/acervo?limit=500', { signal: ctrl.signal })
       .then(r => {
         if (!r.ok) throw new Error('Falha na requisição')
         return r.json()
       })
       .then(data => setAllObras(groupByObra(data.data as ExemplarDTO[])))
-      .catch(() => setError(true))
+      .catch(e => { if (e.name !== 'AbortError') setError(true) })
       .finally(() => setLoading(false))
+    return () => ctrl.abort()
   }, [])
 
   // Dados derivados
@@ -774,12 +777,7 @@ export function CatalogView() {
           {/* Grid de BookCards */}
           <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
             {paginated.map(obra => (
-              <BookCard
-                key={obra.obraId}
-                obra={obra}
-                onOpen={() => router.push(`/acervo/obra/${obra.obraId}`)}
-                onNewLoan={() => router.push('/circulacao')}
-              />
+              <BookCard key={obra.obraId} obra={obra} />
             ))}
           </div>
 

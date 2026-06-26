@@ -1,15 +1,9 @@
-'use client'
+import dynamic from 'next/dynamic'
 
-import { useEffect } from 'react'
-import { usePageTitle } from '@/components/page-context'
-import { CirculationWorkspace } from '@/components/circulacao/circulation-workspace'
+const CirculationWorkspace = dynamic(
+  () => import('@/components/circulacao/circulation-workspace').then(m => ({ default: m.CirculationWorkspace }))
+)
 
 export default function CirculacaoPage() {
-  const { setPageInfo } = usePageTitle()
-
-  useEffect(() => {
-    setPageInfo('Circulação', 'Empréstimos, devoluções e renovações')
-  }, [setPageInfo])
-
   return <CirculationWorkspace />
 }

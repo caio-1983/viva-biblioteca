@@ -31,6 +31,9 @@ const StatusExemplarSchema = z.enum([
 export const ExemplarUpdateSchema = ExemplarCreateSchema.partial().extend({
   status: StatusExemplarSchema.optional(),
   ativo: z.boolean().optional(),
+  codigoBarras: z.string().optional().nullable(),
+  localizacao: z.string().optional().nullable(),
+  estadoFisico: z.string().optional().nullable(),
 })
 
 export type ExemplarCreate = z.infer<typeof ExemplarCreateSchema>

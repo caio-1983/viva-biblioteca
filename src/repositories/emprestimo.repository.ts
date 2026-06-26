@@ -26,10 +26,21 @@ export class EmprestimoRepository {
 
   async findAtivoByCodigoExemplar(codigoExemplar: string): Promise<EmprestimoComRelacoes | null> {
     return prisma.emprestimo.findFirst({
-      where: {
-        status: 'ATIVO',
-        exemplar: { codigoExemplar },
-      },
+      where: { status: 'ATIVO', exemplar: { codigoExemplar } },
+      include: INCLUDE_FULL,
+    })
+  }
+
+  async findAtivoByTombo(tombo: string): Promise<EmprestimoComRelacoes | null> {
+    return prisma.emprestimo.findFirst({
+      where: { status: 'ATIVO', exemplar: { tombo } },
+      include: INCLUDE_FULL,
+    })
+  }
+
+  async findAtivoByCodigoBarras(codigoBarras: string): Promise<EmprestimoComRelacoes | null> {
+    return prisma.emprestimo.findFirst({
+      where: { status: 'ATIVO', exemplar: { codigoBarras } },
       include: INCLUDE_FULL,
     })
   }
@@ -107,6 +118,14 @@ export class EmprestimoRepository {
       ...r,
       totalEmprestimos: Number(r.totalEmprestimos),
     }))
+  }
+
+  async renovar(id: number, novaData: Date) {
+    return prisma.emprestimo.update({
+      where: { id },
+      data: { dataPrevistaDevolucao: novaData, status: 'ATIVO' },
+      include: INCLUDE_FULL,
+    })
   }
 
   async findPorDia(days = 90) {

@@ -21,7 +21,10 @@ export interface ExemplarListItemDTO {
 export interface ExemplarDetailDTO {
   id: number
   codigoExemplar: string
+  codigoBarras: string | null
   tombo: string | null
+  localizacao: string | null
+  estadoFisico: string | null
   observacao: string | null
   status: StatusExemplar
   ativo: boolean
@@ -59,7 +62,10 @@ export function toExemplarDetailDTO(e: ExemplarComObra): ExemplarDetailDTO {
   return {
     id: e.id,
     codigoExemplar: e.codigoExemplar,
+    codigoBarras: e.codigoBarras ?? null,
     tombo: e.tombo ?? null,
+    localizacao: e.localizacao ?? null,
+    estadoFisico: e.estadoFisico ?? null,
     observacao: e.observacao ?? null,
     status: e.status,
     ativo: e.ativo,

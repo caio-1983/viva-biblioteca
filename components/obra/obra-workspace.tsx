@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback, memo } from 'react'
 import { useRouter }    from 'next/navigation'
 import Link             from 'next/link'
 import { usePageTitle } from '@/components/page-context'
@@ -183,7 +183,7 @@ function MetaField({ label, value, missing }: { label: string; value?: string | 
 
 // ── ExemplarCard ──────────────────────────────────────────────────────────────
 
-function ExemplarCard({ exemplar, lastLoan, onLoan, onEdit, onStatusChange, onReturn }: {
+const ExemplarCard = memo(function ExemplarCard({ exemplar, lastLoan, onLoan, onEdit, onStatusChange, onReturn }: {
   exemplar: ExemplarDTO
   lastLoan: LoanDTO | undefined
   onLoan: (e: ExemplarDTO) => void
@@ -388,7 +388,7 @@ function ExemplarCard({ exemplar, lastLoan, onLoan, onEdit, onStatusChange, onRe
       </CardContent>
     </Card>
   )
-}
+})
 
 // ── EmprestimoModal ───────────────────────────────────────────────────────────
 
@@ -812,11 +812,57 @@ function EditExemplarDrawer({ open, onClose, exemplar, onSaved }: {
 
 // ── AddExemplarDrawer ─────────────────────────────────────────────────────────
 
-function AddExemplarDrawer({ open, onClose, obra }: {
+const ESTADOS_FISICOS = ['Novo', 'Bom', 'Regular', 'Ruim', 'Péssimo']
+
+function AddExemplarDrawer({ open, onClose, obra, onSaved }: {
   open: boolean
   onClose: () => void
   obra: ExemplarDTO | null
+  onSaved: () => void
 }) {
+  const [tombo,        setTombo]        = useState('')
+  const [codigoBarras, setCodigoBarras] = useState('')
+  const [localizacao,  setLocalizacao]  = useState('')
+  const [estadoFisico, setEstadoFisico] = useState('')
+  const [observacao,   setObservacao]   = useState('')
+  const [saving,       setSaving]       = useState(false)
+  const [error,        setError]        = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open) {
+      setTombo(''); setCodigoBarras(''); setLocalizacao('')
+      setEstadoFisico(''); setObservacao(''); setError(null)
+    }
+  }, [open])
+
+  async function handleSave() {
+    if (!obra) return
+    setSaving(true); setError(null)
+    try {
+      const res = await fetch(`/api/obras/${obra.obraId}/exemplares`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tombo: tombo || null,
+          codigoBarras: codigoBarras || null,
+          localizacao: localizacao || null,
+          estadoFisico: estadoFisico || null,
+          observacao: observacao || null,
+        }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.error ?? 'Erro ao adicionar exemplar')
+      }
+      onSaved()
+      onClose()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao adicionar exemplar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <Drawer
       open={open}
@@ -826,8 +872,9 @@ function AddExemplarDrawer({ open, onClose, obra }: {
       width="sm"
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>Fechar</Button>
-          <Button disabled className="gap-1.5 opacity-40 cursor-not-allowed">
+          <Button variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={saving} className="gap-1.5">
+            {saving && <Spinner size="sm" />}
             <Plus className="size-3.5" />
             Salvar Exemplar
           </Button>
@@ -835,58 +882,243 @@ function AddExemplarDrawer({ open, onClose, obra }: {
       }
     >
       <div className="space-y-5">
-        {/* Limitação de API */}
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="size-4 text-amber-600 shrink-0" />
-            <p className="ds-caption text-amber-700 font-semibold">Endpoint pendente de implementação</p>
-          </div>
-          <p className="ds-caption text-amber-600">
-            Adicionar um exemplar diretamente a esta Obra requer um endpoint específico.
-            O endpoint atual <code className="text-[11px]">POST /api/acervo</code> cria uma nova Obra separada.
-          </p>
-          <code className="block text-[11px] bg-amber-100 text-amber-800 px-2 py-1.5 rounded font-mono">
-            POST /api/obras/{'{obraId}'}/exemplares
-          </code>
-        </div>
-
-        {/* Contexto da obra */}
         {obra && (
-          <div className="p-3 bg-slate-50 rounded-lg border border-border/60">
-            <p className="ds-caption text-slate-400 mb-1">Obra de destino</p>
-            <p className="text-sm font-medium text-slate-700">{obra.titulo}</p>
-            {obra.autor && <p className="ds-caption text-slate-400">{obra.autor}</p>}
-            <p className="ds-caption font-mono text-slate-300 mt-1">obraId: {obra.obraId}</p>
+          <div className="p-3 bg-brand-50 rounded-lg border border-brand-100">
+            <p className="text-[10px] uppercase tracking-widest text-brand-400 font-medium mb-1">Obra</p>
+            <p className="text-sm font-medium text-brand-800">{obra.titulo}</p>
+            {obra.autor && <p className="ds-caption text-brand-600">{obra.autor}</p>}
           </div>
         )}
 
-        {/* Preview dos campos (desabilitados) */}
-        <div className="space-y-3 opacity-40 pointer-events-none select-none">
-          <p className="ds-label text-slate-500">Campos do novo exemplar</p>
-          <div className="space-y-2">
-            <label className="ds-label text-slate-400">Tombo patrimonial</label>
-            <Input disabled placeholder="ex: 00124" />
-          </div>
-          <div className="space-y-2">
-            <label className="ds-label text-slate-400">Código de barras</label>
-            <Input disabled placeholder="ex: 9788577420123" />
-          </div>
-          <div className="space-y-2">
-            <label className="ds-label text-slate-400">Observação</label>
-            <Input disabled placeholder="Estado físico, localização..." />
+        <div className="space-y-2">
+          <label className="ds-label text-slate-600" htmlFor="add-tombo">Tombo patrimonial</label>
+          <Input
+            id="add-tombo"
+            placeholder="ex: 00124"
+            value={tombo}
+            onChange={e => setTombo(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="ds-label text-slate-600" htmlFor="add-barras">Código de barras</label>
+          <Input
+            id="add-barras"
+            placeholder="ex: 9788577420123"
+            value={codigoBarras}
+            onChange={e => setCodigoBarras(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="ds-label text-slate-600" htmlFor="add-loc">Localização</label>
+          <Input
+            id="add-loc"
+            placeholder="ex: Estante A, Prateleira 3"
+            value={localizacao}
+            onChange={e => setLocalizacao(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <p className="ds-label text-slate-600">Estado físico</p>
+          <div className="flex flex-wrap gap-2">
+            {ESTADOS_FISICOS.map(e => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => setEstadoFisico(f => f === e ? '' : e)}
+                className={cn(
+                  'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                  estadoFisico === e
+                    ? 'bg-brand-500 text-white border-brand-500'
+                    : 'bg-white text-slate-600 border-border hover:border-brand-300'
+                )}
+              >
+                {e}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Alternativa */}
-        <div className="border-t border-border/40 pt-4">
-          <p className="ds-caption text-slate-500 mb-2">Alternativa disponível agora:</p>
-          <Link href="/acervo/cadastro" onClick={onClose}>
-            <Button variant="outline" size="sm" className="gap-1.5 w-full justify-center">
-              <ExternalLink className="size-3.5" />
-              Cadastrar pelo formulário de Acervo
-            </Button>
-          </Link>
+        <div className="space-y-2">
+          <label className="ds-label text-slate-600" htmlFor="add-obs">Observação</label>
+          <textarea
+            id="add-obs"
+            rows={3}
+            className="w-full resize-y rounded-md border border-input bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            placeholder="Notas adicionais..."
+            value={observacao}
+            onChange={e => setObservacao(e.target.value)}
+          />
         </div>
+
+        {error && (
+          <p className="ds-caption text-red-600 flex items-center gap-1.5">
+            <AlertTriangle className="size-3.5" />{error}
+          </p>
+        )}
+      </div>
+    </Drawer>
+  )
+}
+
+// ── EditObraDrawer ────────────────────────────────────────────────────────────
+
+function EditObraDrawer({ open, obra, onClose, onSaved }: {
+  open: boolean
+  obra: ExemplarDTO | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [titulo,         setTitulo]         = useState('')
+  const [subtitulo,      setSubtitulo]      = useState('')
+  const [autor,          setAutor]          = useState('')
+  const [editora,        setEditora]        = useState('')
+  const [isbn,           setIsbn]           = useState('')
+  const [anoPublicacao,  setAnoPublicacao]  = useState('')
+  const [edicao,         setEdicao]         = useState('')
+  const [classificacao,  setClassificacao]  = useState('')
+  const [assunto1,       setAssunto1]       = useState('')
+  const [assunto2,       setAssunto2]       = useState('')
+  const [assunto3,       setAssunto3]       = useState('')
+  const [colecao,        setColecao]        = useState('')
+  const [tipoPublicacao, setTipoPublicacao] = useState('')
+  const [saving,         setSaving]         = useState(false)
+  const [error,          setError]          = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open && obra) {
+      setTitulo(obra.titulo ?? '')
+      setSubtitulo(obra.subtitulo ?? '')
+      setAutor(obra.autor ?? '')
+      setEditora(obra.editora ?? '')
+      setIsbn(obra.isbn ?? '')
+      setAnoPublicacao(obra.anoPublicacao?.toString() ?? '')
+      setEdicao(obra.edicao ?? '')
+      setClassificacao(obra.classificacao ?? '')
+      setAssunto1(obra.assunto1 ?? '')
+      setAssunto2(obra.assunto2 ?? '')
+      setAssunto3(obra.assunto3 ?? '')
+      setColecao(obra.colecao ?? '')
+      setTipoPublicacao(obra.tipoPublicacao ?? '')
+      setError(null)
+    }
+  }, [open, obra])
+
+  async function handleSave() {
+    if (!titulo.trim() || !obra) return
+    setSaving(true); setError(null)
+    try {
+      const res = await fetch(`/api/obras/${obra.obraId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titulo: titulo.trim(),
+          subtitulo: subtitulo.trim() || null,
+          autor: autor.trim() || null,
+          editora: editora.trim() || null,
+          isbn: isbn.trim() || null,
+          anoPublicacao: anoPublicacao ? parseInt(anoPublicacao, 10) : null,
+          edicao: edicao.trim() || null,
+          classificacao: classificacao.trim() || null,
+          assunto1: assunto1.trim() || null,
+          assunto2: assunto2.trim() || null,
+          assunto3: assunto3.trim() || null,
+          colecao: colecao.trim() || null,
+          tipoPublicacao: tipoPublicacao.trim() || null,
+        }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.error ?? 'Erro ao atualizar obra')
+      }
+      onSaved()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao salvar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title="Editar Obra"
+      description={obra?.titulo ?? ''}
+      width="md"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={saving || !titulo.trim()} className="gap-1.5">
+            {saving && <Spinner size="sm" />}
+            Salvar alterações
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2 space-y-2">
+            <label className="ds-label text-slate-600" htmlFor="eo-titulo">Título *</label>
+            <Input id="eo-titulo" value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Título da obra" />
+          </div>
+          <div className="md:col-span-2 space-y-2">
+            <label className="ds-label text-slate-600" htmlFor="eo-subtitulo">Subtítulo</label>
+            <Input id="eo-subtitulo" value={subtitulo} onChange={e => setSubtitulo(e.target.value)} placeholder="Subtítulo (opcional)" />
+          </div>
+          <div className="space-y-2">
+            <label className="ds-label text-slate-600" htmlFor="eo-autor">Autor</label>
+            <Input id="eo-autor" value={autor} onChange={e => setAutor(e.target.value)} placeholder="Nome do autor" />
+          </div>
+          <div className="space-y-2">
+            <label className="ds-label text-slate-600" htmlFor="eo-editora">Editora</label>
+            <Input id="eo-editora" value={editora} onChange={e => setEditora(e.target.value)} placeholder="Editora" />
+          </div>
+          <div className="space-y-2">
+            <label className="ds-label text-slate-600" htmlFor="eo-isbn">ISBN</label>
+            <Input id="eo-isbn" value={isbn} onChange={e => setIsbn(e.target.value)} placeholder="978-..." />
+          </div>
+          <div className="space-y-2">
+            <label className="ds-label text-slate-600" htmlFor="eo-ano">Ano de publicação</label>
+            <Input id="eo-ano" type="number" min={1400} max={2100} value={anoPublicacao} onChange={e => setAnoPublicacao(e.target.value)} placeholder="2024" />
+          </div>
+          <div className="space-y-2">
+            <label className="ds-label text-slate-600" htmlFor="eo-edicao">Edição</label>
+            <Input id="eo-edicao" value={edicao} onChange={e => setEdicao(e.target.value)} placeholder="1ª ed." />
+          </div>
+          <div className="space-y-2">
+            <label className="ds-label text-slate-600" htmlFor="eo-cdd">CDD / Classificação</label>
+            <Input id="eo-cdd" value={classificacao} onChange={e => setClassificacao(e.target.value)} placeholder="ex: 869.3" />
+          </div>
+          <div className="space-y-2">
+            <label className="ds-label text-slate-600" htmlFor="eo-tipo">Tipo de publicação</label>
+            <Input id="eo-tipo" value={tipoPublicacao} onChange={e => setTipoPublicacao(e.target.value)} placeholder="Livro, Periódico..." />
+          </div>
+          <div className="space-y-2">
+            <label className="ds-label text-slate-600" htmlFor="eo-colecao">Coleção</label>
+            <Input id="eo-colecao" value={colecao} onChange={e => setColecao(e.target.value)} placeholder="Nome da coleção" />
+          </div>
+          <div className="space-y-2">
+            <label className="ds-label text-slate-600" htmlFor="eo-a1">Assunto 1</label>
+            <Input id="eo-a1" value={assunto1} onChange={e => setAssunto1(e.target.value)} placeholder="Assunto principal" />
+          </div>
+          <div className="space-y-2">
+            <label className="ds-label text-slate-600" htmlFor="eo-a2">Assunto 2</label>
+            <Input id="eo-a2" value={assunto2} onChange={e => setAssunto2(e.target.value)} placeholder="Assunto secundário" />
+          </div>
+          <div className="space-y-2">
+            <label className="ds-label text-slate-600" htmlFor="eo-a3">Assunto 3</label>
+            <Input id="eo-a3" value={assunto3} onChange={e => setAssunto3(e.target.value)} placeholder="Assunto terciário" />
+          </div>
+        </div>
+
+        {error && (
+          <p className="ds-caption text-red-600 flex items-center gap-1.5">
+            <AlertTriangle className="size-3.5" />{error}
+          </p>
+        )}
       </div>
     </Drawer>
   )
@@ -925,6 +1157,7 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
   const [returnTarget,  setReturnTarget]  = useState<ExemplarDTO | null>(null)
   const [editTarget,    setEditTarget]    = useState<ExemplarDTO | null>(null)
   const [addOpen,       setAddOpen]       = useState(false)
+  const [editObraOpen,  setEditObraOpen]  = useState(false)
   const [statusFilter,  setStatusFilter]  = useState<string>('TODOS')
   const [confirmBaixar, setConfirmBaixar] = useState<ExemplarDTO | null>(null)
 
@@ -936,11 +1169,12 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (signal?: AbortSignal) => {
     try {
+      const opts = signal ? { signal } : {}
       const [acervoRes, loansRes] = await Promise.all([
-        fetch('/api/acervo?limit=500').then(r => r.json()),
-        fetch('/api/loans').then(r => r.json()),
+        fetch('/api/acervo?limit=500', opts).then(r => r.json()),
+        fetch('/api/loans', opts).then(r => r.json()),
       ])
 
       const allEx = (acervoRes.data ?? []) as ExemplarDTO[]
@@ -950,14 +1184,19 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
       const codes = new Set(mine.map(e => e.codigoExemplar))
       const allLoans: LoanDTO[] = Array.isArray(loansRes) ? loansRes : loansRes.data ?? []
       setLoans(allLoans.filter(l => codes.has(l.codigoExemplar)))
-    } catch {
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') return
       setError(true)
     } finally {
       setLoading(false)
     }
   }, [obraId])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => {
+    const ctrl = new AbortController()
+    loadData(ctrl.signal)
+    return () => ctrl.abort()
+  }, [loadData])
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
@@ -993,7 +1232,7 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
 
   // ── Mutations ──────────────────────────────────────────────────────────────
 
-  async function handleStatusChange(exemplar: ExemplarDTO, newStatus: ExemplarStatus) {
+  const handleStatusChange = useCallback(async function handleStatusChange(exemplar: ExemplarDTO, newStatus: ExemplarStatus) {
     try {
       const res = await fetch(`/api/acervo/${exemplar.id}`, {
         method: 'PUT',
@@ -1006,15 +1245,15 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
     } catch {
       toast({ variant: 'error', title: 'Falha ao atualizar status', description: 'Não foi possível atualizar o exemplar. Tente novamente.' })
     }
-  }
+  }, [loadData, toast])
 
-  async function requestStatusChange(exemplar: ExemplarDTO, newStatus: ExemplarStatus) {
+  const requestStatusChange = useCallback(async function requestStatusChange(exemplar: ExemplarDTO, newStatus: ExemplarStatus) {
     if (newStatus === 'BAIXADO') {
       setConfirmBaixar(exemplar)
     } else {
       await handleStatusChange(exemplar, newStatus)
     }
-  }
+  }, [handleStatusChange])
 
   // ── Loading state ──────────────────────────────────────────────────────────
 
@@ -1070,11 +1309,11 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
           breadcrumb={<ObraBreadcrumb titulo={obra.titulo} />}
           actions={
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={loadData}>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => loadData()}>
                 <RefreshCw className="size-3.5" />
                 <span className="hidden sm:inline">Atualizar</span>
               </Button>
-              <Button variant="outline" size="sm" className="gap-1.5">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEditObraOpen(true)}>
                 <Pencil className="size-3.5" />
                 <span className="hidden sm:inline">Editar Obra</span>
               </Button>
@@ -1393,6 +1632,14 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
         open={addOpen}
         onClose={() => setAddOpen(false)}
         obra={obra ?? null}
+        onSaved={() => { loadData(); setAddOpen(false) }}
+      />
+
+      <EditObraDrawer
+        open={editObraOpen}
+        obra={obra ?? null}
+        onClose={() => setEditObraOpen(false)}
+        onSaved={() => { loadData(); setEditObraOpen(false) }}
       />
 
       <ConfirmDialog

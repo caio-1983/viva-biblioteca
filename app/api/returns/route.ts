@@ -4,14 +4,26 @@ import { devolucaoService } from '@/src/services/devolucao.service'
 import { toEmprestimoAtivoDTO } from '@/src/dto/emprestimo.dto'
 
 export async function GET(request: NextRequest) {
-  const codigoExemplar = request.nextUrl.searchParams.get('exemplar')?.trim()
+  const sp = request.nextUrl.searchParams
+  const codigoExemplar = sp.get('exemplar')?.trim()
+  const tombo          = sp.get('tombo')?.trim()
+  const codigoBarras   = sp.get('codigoBarras')?.trim()
 
-  if (!codigoExemplar) {
-    return NextResponse.json({ error: 'Informe o código do exemplar' }, { status: 400 })
+  if (!codigoExemplar && !tombo && !codigoBarras) {
+    return NextResponse.json({ error: 'Informe exemplar, tombo ou codigoBarras' }, { status: 400 })
   }
 
   try {
-    const emprestimo = await emprestimoService.buscarAtivoByCodigoExemplar(codigoExemplar)
+    let emprestimo
+
+    if (codigoExemplar) {
+      emprestimo = await emprestimoService.buscarAtivoByCodigoExemplar(codigoExemplar)
+    } else if (tombo) {
+      emprestimo = await emprestimoService.buscarAtivoByTombo(tombo)
+    } else {
+      emprestimo = await emprestimoService.buscarAtivoByCodigoBarras(codigoBarras!)
+    }
+
     return NextResponse.json(toEmprestimoAtivoDTO(emprestimo))
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro ao buscar empréstimo'

@@ -34,6 +34,31 @@ export class EmprestimoService {
     return emprestimo
   }
 
+  async buscarAtivoByTombo(tombo: string) {
+    const emprestimo = await emprestimoRepository.findAtivoByTombo(tombo)
+    if (!emprestimo) throw new Error('Nenhum empréstimo ativo encontrado para este tombo')
+    return emprestimo
+  }
+
+  async buscarAtivoByCodigoBarras(codigoBarras: string) {
+    const emprestimo = await emprestimoRepository.findAtivoByCodigoBarras(codigoBarras)
+    if (!emprestimo) throw new Error('Nenhum empréstimo ativo encontrado para este código de barras')
+    return emprestimo
+  }
+
+  async renovar(id: number) {
+    const emprestimo = await emprestimoRepository.findById(id)
+    if (!emprestimo) throw new Error('Empréstimo não encontrado')
+    if (emprestimo.status === 'DEVOLVIDO') throw new Error('Empréstimo já devolvido')
+    if (emprestimo.status === 'CANCELADO') throw new Error('Empréstimo cancelado')
+
+    const config = await configuracaoRepository.get()
+    const novaData = new Date(emprestimo.dataPrevistaDevolucao)
+    novaData.setDate(novaData.getDate() + config.prazoEmprestimoDias)
+
+    return emprestimoRepository.renovar(id, novaData)
+  }
+
   async buscarPorLeitor(leitorId: number) {
     return emprestimoRepository.findByLeitorId(leitorId)
   }

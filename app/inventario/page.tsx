@@ -1,15 +1,9 @@
-'use client'
+import dynamic from 'next/dynamic'
 
-import { useEffect } from 'react'
-import { usePageTitle } from '@/components/page-context'
-import { InventoryWorkspace } from '@/components/inventario/inventory-workspace'
+const InventoryWorkspace = dynamic(
+  () => import('@/components/inventario/inventory-workspace').then(m => ({ default: m.InventoryWorkspace }))
+)
 
 export default function InventarioPage() {
-  const { setPageInfo } = usePageTitle()
-
-  useEffect(() => {
-    setPageInfo('Inventário', 'Conferência patrimonial de exemplares')
-  }, [setPageInfo])
-
   return <InventoryWorkspace />
 }

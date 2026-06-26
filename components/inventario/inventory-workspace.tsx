@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react'
 import Link from 'next/link'
 import {
   Search, QrCode, CheckCircle2, AlertTriangle,
@@ -19,6 +19,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/components/ui/page-header'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useToast } from '@/components/ui/toast'
+import { usePageTitle } from '@/components/page-context'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -384,7 +385,7 @@ function QuickActionsDrawer({
 
 // ─── ResultCard ──────────────────────────────────────────────────────────────
 
-function ResultCard({
+const ResultCard = memo(function ResultCard({
   item,
   onActions,
 }: {
@@ -423,7 +424,7 @@ function ResultCard({
       </CardContent>
     </Card>
   )
-}
+})
 
 // ─── ScanRow ─────────────────────────────────────────────────────────────────
 
@@ -474,6 +475,12 @@ function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
 // ─── InventoryWorkspace (main export) ───────────────────────────────────────
 
 export function InventoryWorkspace() {
+  const { setPageInfo } = usePageTitle()
+
+  useEffect(() => {
+    setPageInfo('Inventário', 'Conferência patrimonial de exemplares')
+  }, [setPageInfo])
+
   const [allExemplares, setAllExemplares] = useState<ExemplarItem[]>([])
   const [stats, setStats] = useState<StatsData | null>(null)
   const [dataLoading, setDataLoading] = useState(true)
@@ -493,24 +500,30 @@ export function InventoryWorkspace() {
   const scanRef = useRef<HTMLInputElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (signal?: AbortSignal) => {
     setDataLoading(true)
     setDataError(false)
     try {
+      const opts = signal ? { signal } : {}
       const [acervoRes, statsRes] = await Promise.all([
-        fetch('/api/acervo?limit=500').then(r => r.json()),
-        fetch('/api/acervo/stats').then(r => r.json()),
+        fetch('/api/acervo?limit=500', opts).then(r => r.json()),
+        fetch('/api/acervo/stats', opts).then(r => r.json()),
       ])
       setAllExemplares((acervoRes.data ?? []) as ExemplarItem[])
       setStats(statsRes as StatsData)
-    } catch {
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') return
       setDataError(true)
     } finally {
       setDataLoading(false)
     }
   }, [])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => {
+    const ctrl = new AbortController()
+    loadData(ctrl.signal)
+    return () => ctrl.abort()
+  }, [loadData])
 
   // Auto-focus scanner input when switching tabs
   useEffect(() => {
@@ -543,7 +556,7 @@ export function InventoryWorkspace() {
   }, [allExemplares, query, searchKind])
 
   // Open detail drawer
-  async function openActions(id: number) {
+  const openActions = useCallback(async function openActions(id: number) {
     setDrawerOpen(true)
     setDrawerLoading(true)
     setDrawerDetail(null)
@@ -555,7 +568,7 @@ export function InventoryWorkspace() {
     } finally {
       setDrawerLoading(false)
     }
-  }
+  }, [])
 
   function handleUpdated(updated: ExemplarDetail) {
     setDrawerDetail(updated)
@@ -612,7 +625,7 @@ export function InventoryWorkspace() {
               variant="outline"
               size="sm"
               className="gap-2"
-              onClick={loadData}
+              onClick={() => loadData()}
               disabled={dataLoading}
             >
               {dataLoading
@@ -662,7 +675,7 @@ export function InventoryWorkspace() {
             title="Não foi possível carregar o acervo"
             description="Ocorreu um erro ao buscar os dados. Tente novamente."
             action={
-              <Button variant="outline" size="sm" onClick={loadData} className="gap-2">
+              <Button variant="outline" size="sm" onClick={() => loadData()} className="gap-2">
                 <RefreshCw className="size-4" />
                 Tentar novamente
               </Button>

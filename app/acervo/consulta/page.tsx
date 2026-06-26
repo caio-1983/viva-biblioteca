@@ -1,15 +1,9 @@
-'use client'
+import dynamic from 'next/dynamic'
 
-import { useEffect } from 'react'
-import { usePageTitle } from '@/components/page-context'
-import { CatalogView } from '@/components/catalog/catalog-view'
+const CatalogView = dynamic(
+  () => import('@/components/catalog/catalog-view').then(m => ({ default: m.CatalogView }))
+)
 
 export default function CatalogoPage() {
-  const { setPageInfo } = usePageTitle()
-
-  useEffect(() => {
-    setPageInfo('Catálogo', 'Acervo de obras e exemplares')
-  }, [setPageInfo])
-
   return <CatalogView />
 }

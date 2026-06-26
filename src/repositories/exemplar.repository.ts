@@ -107,7 +107,7 @@ export class ExemplarRepository {
   async update(id: number, data: ExemplarUpdate): Promise<ExemplarComObra> {
     const exemplar = await prisma.exemplar.findUniqueOrThrow({ where: { id } })
 
-    const { tombo, observacao, status, ativo, ...obraFields } = data
+    const { tombo, observacao, status, ativo, codigoBarras, localizacao, estadoFisico, ...obraFields } = data
     const { anoPublicacao, tipoPublicacao, isbn, classificacao, titulo, subtitulo,
             autor, edicao, editora, assunto1, assunto2, assunto3, colecao } = obraFields
 
@@ -135,10 +135,13 @@ export class ExemplarRepository {
       await tx.exemplar.update({
         where: { id },
         data: {
-          ...(tombo !== undefined       && { tombo }),
-          ...(observacao !== undefined  && { observacao }),
-          ...(status !== undefined      && { status }),
-          ...(ativo !== undefined       && { ativo }),
+          ...(tombo !== undefined        && { tombo }),
+          ...(observacao !== undefined   && { observacao }),
+          ...(status !== undefined       && { status }),
+          ...(ativo !== undefined        && { ativo }),
+          ...(codigoBarras !== undefined && { codigoBarras }),
+          ...(localizacao !== undefined  && { localizacao }),
+          ...(estadoFisico !== undefined && { estadoFisico }),
         },
       })
     })

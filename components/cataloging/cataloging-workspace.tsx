@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { usePageTitle } from '@/components/page-context'
 import Link from 'next/link'
 import {
   Search, BookOpen, Plus, ArrowLeft, ArrowRight, CheckCircle2,
@@ -420,6 +421,10 @@ function ImportCard() {
 
 export function CatalogingWorkspace() {
   const router = useRouter()
+  const { setPageInfo } = usePageTitle()
+  useEffect(() => {
+    setPageInfo('Catalogação', 'Identifique a obra e registre exemplares')
+  }, [setPageInfo])
 
   // Data cache
   const allExemplar = useRef<RawExemplar[]>([])

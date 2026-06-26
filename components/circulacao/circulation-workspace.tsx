@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
+import { usePageTitle } from '@/components/page-context'
 import {
   BookMarked, Undo2, RefreshCw, Search, CheckCircle, AlertTriangle,
   Clock, Check, ChevronRight, ChevronLeft, BookOpen, Users,
@@ -278,6 +279,10 @@ function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
 // ── CirculationWorkspace ──────────────────────────────────────────────────────
 
 export function CirculationWorkspace() {
+  const { setPageInfo } = usePageTitle()
+  useEffect(() => {
+    setPageInfo('Circulação', 'Empréstimos, devoluções e renovações')
+  }, [setPageInfo])
 
   // ── Shared data ─────────────────────────────────────────────────────────────
   const [exemplares,  setExemplares]  = useState<ExemplarDTO[]>([])
@@ -312,29 +317,38 @@ export function CirculationWorkspace() {
   const [returnSuccess,    setReturnSuccess]    = useState(false)
 
   // ── Renovação ────────────────────────────────────────────────────────────────
-  const [renovQuery, setRenovQuery] = useState('')
+  const [renovQuery,      setRenovQuery]      = useState('')
+  const [renovSubmitting, setRenovSubmitting] = useState<number | null>(null)
+  const [renovSuccess,    setRenovSuccess]    = useState<number | null>(null)
+  const [renovError,      setRenovError]      = useState<{ id: number; msg: string } | null>(null)
 
   // ── Load data ────────────────────────────────────────────────────────────────
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (signal?: AbortSignal) => {
     setDataError(false)
     try {
+      const opts = signal ? { signal } : {}
       const [acervoRes, loansRes, usuariosRes] = await Promise.all([
-        fetch('/api/acervo?limit=500').then(r => r.json()),
-        fetch('/api/loans').then(r => r.json()),
-        fetch('/api/usuarios').then(r => r.json()),
+        fetch('/api/acervo?limit=500', opts).then(r => r.json()),
+        fetch('/api/loans', opts).then(r => r.json()),
+        fetch('/api/usuarios', opts).then(r => r.json()),
       ])
       setExemplares((acervoRes.data ?? []) as ExemplarDTO[])
       setLoans(Array.isArray(loansRes) ? loansRes : loansRes.data ?? [])
       setUsuarios(Array.isArray(usuariosRes) ? usuariosRes : usuariosRes.data ?? [])
-    } catch {
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') return
       setDataError(true)
     } finally {
       setDataLoading(false)
     }
   }, [])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => {
+    const ctrl = new AbortController()
+    loadData(ctrl.signal)
+    return () => ctrl.abort()
+  }, [loadData])
 
   // ── Derived ──────────────────────────────────────────────────────────────────
 
@@ -508,6 +522,28 @@ export function CirculationWorkspace() {
     }
   }
 
+  // ── Renovar empréstimo ────────────────────────────────────────────────────────
+
+  async function handleRenovar(loanId: number) {
+    setRenovSubmitting(loanId)
+    setRenovError(null)
+    setRenovSuccess(null)
+    try {
+      const res = await fetch(`/api/loans/${loanId}/renovar`, { method: 'POST' })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.error ?? 'Erro ao renovar')
+      }
+      setRenovSuccess(loanId)
+      await loadData()
+      setTimeout(() => setRenovSuccess(null), 3000)
+    } catch (e) {
+      setRenovError({ id: loanId, msg: e instanceof Error ? e.message : 'Erro ao renovar' })
+    } finally {
+      setRenovSubmitting(null)
+    }
+  }
+
   // ── Loading / Error states ────────────────────────────────────────────────────
 
   if (dataLoading) {
@@ -537,7 +573,7 @@ export function CirculationWorkspace() {
           icon={<AlertTriangle className="size-8 text-slate-200" />}
           title="Não foi possível carregar os dados"
           description="Verifique a conexão e tente novamente."
-          action={<Button onClick={loadData}>Tentar novamente</Button>}
+          action={<Button onClick={() => loadData()}>Tentar novamente</Button>}
         />
       </div>
     )
@@ -1107,19 +1143,6 @@ export function CirculationWorkspace() {
           </div>
         </div>
 
-        {/* Nota sobre renovação */}
-        <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
-          <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="ds-caption text-amber-700 font-medium">Renovação pendente de endpoint</p>
-            <p className="ds-caption text-amber-600 mt-0.5">
-              A renovação requer{' '}
-              <code className="text-[11px] bg-amber-100 px-1 rounded">POST /api/loans/:id/renovar</code>
-              {' '}com extensão do prazo e validação de regras.
-            </p>
-          </div>
-        </div>
-
         {/* Busca */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
@@ -1181,16 +1204,28 @@ export function CirculationWorkspace() {
                   </div>
 
                   {/* Ação */}
-                  <div className="shrink-0 relative group">
+                  <div className="shrink-0 space-y-1">
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled
-                      className="gap-1.5 opacity-50 cursor-not-allowed"
+                      onClick={() => handleRenovar(loan.id)}
+                      disabled={renovSubmitting === loan.id}
+                      className={cn(
+                        'gap-1.5',
+                        renovSuccess === loan.id && 'border-green-300 text-green-700'
+                      )}
                     >
-                      <CalendarClock className="size-3.5" />
-                      Renovar
+                      {renovSubmitting === loan.id
+                        ? <Spinner size="sm" />
+                        : renovSuccess === loan.id
+                          ? <Check className="size-3.5" />
+                          : <CalendarClock className="size-3.5" />
+                      }
+                      {renovSuccess === loan.id ? 'Renovado' : 'Renovar'}
                     </Button>
+                    {renovError?.id === loan.id && (
+                      <p className="ds-caption text-red-500 max-w-[140px] text-right">{renovError.msg}</p>
+                    )}
                   </div>
                 </div>
               )
@@ -1277,7 +1312,7 @@ export function CirculationWorkspace() {
 
   const pageActions = (
     <div className="flex items-center gap-2">
-      <Button variant="outline" size="sm" className="gap-1.5" onClick={loadData}>
+      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => loadData()}>
         <RefreshCw className="size-3.5" />
         <span className="hidden sm:inline">Atualizar</span>
       </Button>

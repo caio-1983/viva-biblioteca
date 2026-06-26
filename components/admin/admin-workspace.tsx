@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { usePageTitle } from '@/components/page-context'
 import Link from 'next/link'
 import {
   Settings, Upload, Users, Tag, HardDrive, ClipboardList, Plug,
@@ -334,6 +335,10 @@ function ImportDrawer({ open, onClose }: { open: boolean; onClose: () => void })
 
 export function AdminWorkspace() {
   const { toast } = useToast()
+  const { setPageInfo } = usePageTitle()
+  useEffect(() => {
+    setPageInfo('Administração', 'Configurações, importações e controle do sistema')
+  }, [setPageInfo])
 
   // Config state
   const [config,        setConfig]        = useState<Configuracao | null>(null)

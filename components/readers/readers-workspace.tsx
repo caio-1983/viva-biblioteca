@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react'
 import {
   Search, Users, Mail, Phone, Calendar, Clock, BookOpen,
   Undo2, RotateCcw, AlertTriangle, CheckCircle2, Loader2,
-  ChevronLeft, MoreHorizontal, UserPlus, BookMarked,
+  ChevronLeft, MoreHorizontal, UserPlus, BookMarked, Check,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,10 @@ import { Modal, ModalCloseButton } from '@/components/ui/modal'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Card, CardContent } from '@/components/ui/card'
 import { ActionMenu } from '@/components/ui/action-menu'
+import { Drawer } from '@/components/ui/drawer'
 import { useToast } from '@/components/ui/toast'
+import { usePageTitle } from '@/components/page-context'
+import { Spinner } from '@/components/ui/loading-state'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -92,18 +95,19 @@ function avatarColor(id: number) {
 
 // ─── LeitorListCard ───────────────────────────────────────────────────────────
 
-function LeitorListCard({
-  leitor, active, overdue, selected, onClick,
+const LeitorListCard = memo(function LeitorListCard({
+  leitor, active, overdue, selected, onSelect,
 }: {
   leitor: Leitor
   active: number
   overdue: number
   selected: boolean
-  onClick: () => void
+  onSelect: (id: number) => void
 }) {
+  const handleClick = useCallback(() => onSelect(leitor.id), [onSelect, leitor.id])
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       className={cn(
         'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-75',
         selected ? 'bg-blue-50 ring-1 ring-blue-200/70' : 'hover:bg-slate-50'
@@ -136,18 +140,35 @@ function LeitorListCard({
       )}
     </button>
   )
-}
+})
 
 // ─── ActiveLoanCard ───────────────────────────────────────────────────────────
 
-function ActiveLoanCard({
-  loan, onReturn,
+const ActiveLoanCard = memo(function ActiveLoanCard({
+  loan, onReturn, onRenew,
 }: {
   loan: LoanHistoryItem
   onReturn: (loan: LoanHistoryItem) => void
+  onRenew: (loanId: number) => Promise<void>
 }) {
   const days = daysUntil(loan.dataPrevistaDevolucao)
   const isOverdue = days < 0
+  const [renewing, setRenewing] = useState(false)
+  const [renewed,  setRenewed]  = useState(false)
+  const [renewErr, setRenewErr] = useState<string | null>(null)
+
+  async function handleRenew() {
+    setRenewing(true); setRenewErr(null)
+    try {
+      await onRenew(loan.id)
+      setRenewed(true)
+      setTimeout(() => setRenewed(false), 3000)
+    } catch (e) {
+      setRenewErr(e instanceof Error ? e.message : 'Erro ao renovar')
+    } finally {
+      setRenewing(false)
+    }
+  }
 
   return (
     <Card className="border border-border/60 bg-white shadow-none">
@@ -181,16 +202,20 @@ function ActiveLoanCard({
               </span>
             </div>
 
+            {renewErr && (
+              <p className="text-xs text-red-500 mt-1">{renewErr}</p>
+            )}
+
             <div className="flex gap-2 mt-3">
               <Button
                 size="sm"
                 variant="outline"
-                className="gap-1.5 text-xs opacity-50 cursor-not-allowed"
-                disabled
-                title="Requer endpoint POST /api/loans/:id/renovar"
+                onClick={handleRenew}
+                disabled={renewing}
+                className={cn('gap-1.5 text-xs', renewed && 'border-green-300 text-green-700')}
               >
-                <RotateCcw className="size-3" />
-                Renovar
+                {renewing ? <Spinner size="sm" /> : renewed ? <CheckCircle2 className="size-3" /> : <RotateCcw className="size-3" />}
+                {renewed ? 'Renovado' : 'Renovar'}
               </Button>
               <Button
                 size="sm"
@@ -209,7 +234,7 @@ function ActiveLoanCard({
       </CardContent>
     </Card>
   )
-}
+})
 
 // ─── HistoryTimeline ──────────────────────────────────────────────────────────
 
@@ -340,6 +365,11 @@ function ReturnModal({
 
 export function ReadersWorkspace() {
   const { toast } = useToast()
+  const { setPageInfo } = usePageTitle()
+
+  useEffect(() => {
+    setPageInfo('Leitores', 'Perfil, empréstimos e histórico de cada leitor')
+  }, [setPageInfo])
 
   const [leitores, setLeitores]           = useState<Leitor[]>([])
   const [allLoans, setAllLoans]           = useState<LoanListItem[]>([])
@@ -355,6 +385,8 @@ export function ReadersWorkspace() {
 
   const [returnTarget, setReturnTarget]   = useState<LoanHistoryItem | null>(null)
   const [returnSubmitting, setReturnSubmitting] = useState(false)
+  const [createOpen, setCreateOpen]       = useState(false)
+  const [editTarget, setEditTarget]       = useState<Leitor | null>(null)
 
   // ── Load list data ────────────────────────────────────────────────────────
 
@@ -428,11 +460,11 @@ export function ReadersWorkspace() {
     [leitores, selectedId]
   )
 
-  function selectLeitor(id: number) {
+  const selectLeitor = useCallback((id: number) => {
     setSelectedId(id)
     setMobileView('profile')
     setHistory([])
-  }
+  }, [])
 
   // ── Derived from history ──────────────────────────────────────────────────
 
@@ -444,6 +476,22 @@ export function ReadersWorkspace() {
     () => history.filter(e => e.status === 'ATRASADO'),
     [history]
   )
+
+  // ── Renovar flow ─────────────────────────────────────────────────────────
+
+  async function handleRenovarLeitor(loanId: number) {
+    const res = await fetch(`/api/loans/${loanId}/renovar`, { method: 'POST' })
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      throw new Error(d.error ?? 'Erro ao renovar')
+    }
+    if (selectedId) {
+      fetch(`/api/usuarios/${selectedId}/emprestimos`)
+        .then(r => r.json())
+        .then((data: LoanHistoryItem[]) => setHistory(Array.isArray(data) ? data : []))
+        .catch(() => {})
+    }
+  }
 
   // ── Return flow ───────────────────────────────────────────────────────────
 
@@ -512,9 +560,9 @@ export function ReadersWorkspace() {
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 px-2 text-xs gap-1 opacity-50 cursor-not-allowed"
-            disabled
-            title="Requer endpoint POST /api/usuarios — funcionalidade em desenvolvimento"
+            className="h-6 px-2 text-xs gap-1"
+            onClick={() => setCreateOpen(true)}
+            title="Cadastrar novo leitor"
           >
             <UserPlus className="size-3" />
           </Button>
@@ -547,7 +595,7 @@ export function ReadersWorkspace() {
                     active={summary.active}
                     overdue={summary.overdue}
                     selected={selectedId === l.id}
-                    onClick={() => selectLeitor(l.id)}
+                    onSelect={selectLeitor}
                   />
                 )
               })}
@@ -621,7 +669,7 @@ export function ReadersWorkspace() {
                       <ActionMenu
                         trigger={<Button size="sm" variant="outline" className="size-8 p-0"><MoreHorizontal className="size-4" /></Button>}
                         items={[
-                          { label: 'Editar cadastro', onClick: () => {} },
+                          { label: 'Editar cadastro', onClick: () => setEditTarget(selectedLeitor) },
                           { label: 'Imprimir carteirinha', onClick: () => {} },
                           { label: 'Inativar leitor', onClick: () => {}, destructive: true },
                         ]}
@@ -683,7 +731,7 @@ export function ReadersWorkspace() {
               ) : (
                 <div className="space-y-3">
                   {activeLoans.map(loan => (
-                    <ActiveLoanCard key={loan.id} loan={loan} onReturn={setReturnTarget} />
+                    <ActiveLoanCard key={loan.id} loan={loan} onReturn={setReturnTarget} onRenew={handleRenovarLeitor} />
                   ))}
                 </div>
               )}
@@ -725,6 +773,189 @@ export function ReadersWorkspace() {
         onConfirm={confirmReturn}
         submitting={returnSubmitting}
       />
+
+      {/* ── Create leitor drawer ── */}
+      <LeitorFormDrawer
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSaved={(leitor) => {
+          setLeitores(prev => [leitor, ...prev])
+          setCreateOpen(false)
+          toast({ variant: 'success', title: 'Leitor cadastrado', description: `${leitor.nomeCompleto} adicionado com sucesso.` })
+        }}
+      />
+
+      {/* ── Edit leitor drawer ── */}
+      <LeitorFormDrawer
+        open={!!editTarget}
+        leitor={editTarget}
+        onClose={() => setEditTarget(null)}
+        onSaved={(updated) => {
+          setLeitores(prev => prev.map(l => l.id === updated.id ? updated : l))
+          setEditTarget(null)
+          toast({ variant: 'success', title: 'Leitor atualizado', description: `${updated.nomeCompleto} atualizado com sucesso.` })
+        }}
+      />
     </div>
+  )
+}
+
+// ── LeitorFormDrawer ──────────────────────────────────────────────────────────
+
+function LeitorFormDrawer({ open, leitor, onClose, onSaved }: {
+  open: boolean
+  leitor?: Leitor | null
+  onClose: () => void
+  onSaved: (leitor: Leitor) => void
+}) {
+  const isEdit = !!leitor
+
+  const [nomeCompleto,    setNomeCompleto]    = useState('')
+  const [cpf,             setCpf]             = useState('')
+  const [email,           setEmail]           = useState('')
+  const [celular,         setCelular]         = useState('')
+  const [dataNascimento,  setDataNascimento]  = useState('')
+  const [membro,          setMembro]          = useState(true)
+  const [saving,          setSaving]          = useState(false)
+  const [error,           setError]           = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open) {
+      setNomeCompleto(leitor?.nomeCompleto ?? '')
+      setCpf(leitor?.cpf ?? '')
+      setEmail(leitor?.email ?? '')
+      setCelular(leitor?.celular ?? '')
+      setDataNascimento(leitor?.dataNascimento ? leitor.dataNascimento.split('T')[0] : '')
+      setMembro(leitor?.membro ?? true)
+      setError(null)
+    }
+  }, [open, leitor])
+
+  async function handleSave() {
+    if (!nomeCompleto.trim()) { setError('Nome é obrigatório'); return }
+    setSaving(true); setError(null)
+    try {
+      const url    = isEdit ? `/api/usuarios/${leitor!.id}` : '/api/usuarios'
+      const method = isEdit ? 'PUT' : 'POST'
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nomeCompleto: nomeCompleto.trim(),
+          cpf: cpf.trim() || null,
+          email: email.trim() || null,
+          celular: celular.trim() || null,
+          dataNascimento: dataNascimento || null,
+          membro,
+        }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.error ?? 'Erro ao salvar leitor')
+      }
+      const saved: Leitor = await res.json()
+      onSaved(saved)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao salvar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title={isEdit ? 'Editar Leitor' : 'Novo Leitor'}
+      description={isEdit ? leitor?.nomeCompleto : 'Preencha os dados do leitor'}
+      width="sm"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={saving} className="gap-1.5">
+            {saving && <Spinner size="sm" />}
+            {isEdit ? 'Salvar alterações' : 'Cadastrar leitor'}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-5">
+        <div className="space-y-2">
+          <label className="ds-label text-slate-600" htmlFor="lf-nome">Nome completo *</label>
+          <Input
+            id="lf-nome"
+            placeholder="Nome completo"
+            value={nomeCompleto}
+            onChange={e => setNomeCompleto(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="ds-label text-slate-600" htmlFor="lf-cpf">CPF</label>
+          <Input
+            id="lf-cpf"
+            placeholder="000.000.000-00"
+            value={cpf}
+            onChange={e => setCpf(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="ds-label text-slate-600" htmlFor="lf-email">E-mail</label>
+          <Input
+            id="lf-email"
+            type="email"
+            placeholder="nome@exemplo.com"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="ds-label text-slate-600" htmlFor="lf-cel">Celular</label>
+          <Input
+            id="lf-cel"
+            placeholder="(00) 90000-0000"
+            value={celular}
+            onChange={e => setCelular(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="ds-label text-slate-600" htmlFor="lf-nasc">Data de nascimento</label>
+          <Input
+            id="lf-nasc"
+            type="date"
+            value={dataNascimento}
+            onChange={e => setDataNascimento(e.target.value)}
+          />
+        </div>
+
+        <div className="flex items-center gap-3 pt-1">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={membro}
+            onClick={() => setMembro(m => !m)}
+            className={cn(
+              'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
+              membro ? 'bg-brand-500' : 'bg-slate-200'
+            )}
+          >
+            <span className={cn(
+              'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+              membro ? 'translate-x-4' : 'translate-x-1'
+            )} />
+          </button>
+          <span className="text-sm text-slate-700">Membro da biblioteca</span>
+        </div>
+
+        {error && (
+          <p className="ds-caption text-red-600 flex items-center gap-1.5">
+            <AlertTriangle className="size-3.5" />{error}
+          </p>
+        )}
+      </div>
+    </Drawer>
   )
 }

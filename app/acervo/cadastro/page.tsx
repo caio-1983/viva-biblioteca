@@ -1,15 +1,9 @@
-'use client'
+import dynamic from 'next/dynamic'
 
-import { useEffect } from 'react'
-import { usePageTitle } from '@/components/page-context'
-import { CatalogingWorkspace } from '@/components/cataloging/cataloging-workspace'
+const CatalogingWorkspace = dynamic(
+  () => import('@/components/cataloging/cataloging-workspace').then(m => ({ default: m.CatalogingWorkspace }))
+)
 
 export default function CadastroAcervoPage() {
-  const { setPageInfo } = usePageTitle()
-
-  useEffect(() => {
-    setPageInfo('Catalogação', 'Identifique a obra e registre exemplares')
-  }, [setPageInfo])
-
   return <CatalogingWorkspace />
 }
