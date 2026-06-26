@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { acervoImportService } from '@/src/services/acervo-import.service'
+import { importacaoService } from '@/src/services/importacao.service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,8 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     const content = await file.text()
-    const result = await acervoImportService.importCSV(content)
-
+    const result = await importacaoService.importar(content)
     return NextResponse.json(result, { status: 200 })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro ao importar CSV'
@@ -30,13 +29,10 @@ export async function GET(request: NextRequest) {
     const csv = searchParams.get('csv')
 
     if (!csv) {
-      return NextResponse.json(
-        { error: 'Parâmetro csv é obrigatório' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Parâmetro csv é obrigatório' }, { status: 400 })
     }
 
-    const analysis = await acervoImportService.analyzeCSV(decodeURIComponent(csv))
+    const analysis = await importacaoService.analisar(decodeURIComponent(csv))
     return NextResponse.json(analysis)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro ao analisar CSV'

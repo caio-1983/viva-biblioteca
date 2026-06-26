@@ -1,14 +1,9 @@
-'use client'
+import dynamic from 'next/dynamic'
 
-import { useEffect } from 'react'
-import { usePageTitle } from '@/components/page-context'
+const AdminWorkspace = dynamic(
+  () => import('@/components/admin/admin-workspace').then(m => ({ default: m.AdminWorkspace }))
+)
 
 export default function SettingsPage() {
-  const { setPageInfo } = usePageTitle()
-
-  useEffect(() => {
-    setPageInfo('Configurações', 'Gerenciar configurações do sistema')
-  }, [setPageInfo])
-
-  return <div />
+  return <AdminWorkspace />
 }

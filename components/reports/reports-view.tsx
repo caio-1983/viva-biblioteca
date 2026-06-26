@@ -3,6 +3,12 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/page-header'
+import { KpiCard } from '@/components/ui/kpi-card'
+import { LoadingState } from '@/components/ui/loading-state'
+import { EmptyState } from '@/components/ui/empty-state'
+import { useToast } from '@/components/ui/toast'
+import { usePageTitle } from '@/components/page-context'
 import {
   BookOpen,
   BookMarked,
@@ -12,7 +18,10 @@ import {
   FileSpreadsheet,
   FileText,
   TrendingUp,
+  ChevronRight,
   Loader2,
+  RefreshCw,
+  BarChart2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -36,7 +45,7 @@ interface DiaData {
 
 interface Atrasado {
   titulo: string
-  numeroExemplar: string
+  codigoExemplar: string
   nomeCompleto: string
   numeroCadastro: string
   dataPrevistaDevolucao: string
@@ -46,7 +55,7 @@ interface Atrasado {
 interface MaisEmprestado {
   titulo: string
   autor: string | null
-  numeroExemplar: string
+  codigoExemplar: string
   totalEmprestimos: number
 }
 
@@ -75,30 +84,61 @@ const CHART_COLORS = [
   '#84cc16',
 ]
 
+const PERIOD_OPTIONS: { value: 7 | 30 | 90; label: string }[] = [
+  { value: 7,  label: '7 dias' },
+  { value: 30, label: '30 dias' },
+  { value: 90, label: '90 dias' },
+]
+
 function formatDayLabel(dateStr: string) {
   const [, month, day] = dateStr.split('-')
   return `${day}/${month}`
 }
 
 const EXPORT_ITEMS = [
-  { tipo: 'acervo', label: 'Acervo' },
-  { tipo: 'usuarios', label: 'Usuários' },
+  { tipo: 'acervo',      label: 'Acervo' },
+  { tipo: 'usuarios',    label: 'Usuários' },
   { tipo: 'emprestimos', label: 'Empréstimos' },
 ]
 
+const ReportsBreadcrumb = () => (
+  <nav aria-label="Navegação" className="flex items-center gap-1.5 text-sm text-slate-500">
+    <span>VIVA</span>
+    <ChevronRight className="size-3.5 text-slate-300" />
+    <span className="text-slate-700 font-medium">Relatórios</span>
+  </nav>
+)
+
 export function ReportsView() {
-  const [stats, setStats] = useState<ReportStats | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [period, setPeriod] = useState<7 | 30 | 90>(30)
+  const { setPageInfo } = usePageTitle()
+  const { toast } = useToast()
+
+  const [stats, setStats]         = useState<ReportStats | null>(null)
+  const [loading, setLoading]     = useState(true)
+  const [statsError, setStatsError] = useState(false)
+  const [period, setPeriod]       = useState<7 | 30 | 90>(30)
   const [exportLoading, setExportLoading] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/reports')
-      .then(r => r.json())
-      .then(setStats)
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
+    setPageInfo('Relatórios', 'Indicadores, histórico e exportação de dados')
+  }, [setPageInfo])
+
+  async function loadStats() {
+    setLoading(true)
+    setStatsError(false)
+    try {
+      const res = await fetch('/api/reports')
+      if (!res.ok) throw new Error('Resposta inválida do servidor')
+      const data = await res.json()
+      setStats(data)
+    } catch {
+      setStatsError(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { loadStats() }, [])
 
   const chartData = useMemo(() => {
     if (!stats) return []
@@ -116,14 +156,15 @@ export function ReportsView() {
       const res = await fetch(`/api/reports/export?tipo=${tipo}&formato=${formato}`)
       if (!res.ok) throw new Error('Erro ao exportar')
       const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
       a.download = `${tipo}.${formato}`
       a.click()
       URL.revokeObjectURL(url)
-    } catch (err) {
-      console.error(err)
+      toast({ variant: 'success', title: 'Exportação concluída', description: `${tipo}.${formato} baixado com sucesso.` })
+    } catch {
+      toast({ variant: 'error', title: 'Falha na exportação', description: 'Não foi possível gerar o arquivo. Tente novamente.' })
     } finally {
       setExportLoading(null)
     }
@@ -131,113 +172,102 @@ export function ReportsView() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-      </div>
+      <>
+        <PageHeader
+          title="Relatórios"
+          description="Indicadores, histórico e exportação de dados"
+          breadcrumb={<ReportsBreadcrumb />}
+        />
+        <LoadingState label="Carregando relatórios…" />
+      </>
     )
   }
 
-  if (!stats) {
+  if (statsError || !stats) {
     return (
-      <div className="flex items-center justify-center py-32 text-muted-foreground">
-        Erro ao carregar relatórios.
-      </div>
+      <>
+        <PageHeader
+          title="Relatórios"
+          description="Indicadores, histórico e exportação de dados"
+          breadcrumb={<ReportsBreadcrumb />}
+        />
+        <EmptyState
+          icon={<BarChart2 className="size-8 text-slate-400" />}
+          title="Não foi possível carregar os relatórios"
+          description="Ocorreu um erro ao buscar os dados. Verifique a conexão e tente novamente."
+          action={
+            <Button onClick={loadStats} variant="outline" className="gap-2">
+              <RefreshCw className="size-4" />
+              Tentar novamente
+            </Button>
+          }
+        />
+      </>
     )
   }
-
-  const kpis = [
-    {
-      title: 'Total do Acervo',
-      value: stats.acervo.total,
-      sub: `${stats.acervo.disponivel} disponíveis`,
-      icon: BookOpen,
-      bg: 'bg-blue-50',
-      text: 'text-blue-700',
-      grad: 'from-blue-500 to-blue-600',
-    },
-    {
-      title: 'Emprestados',
-      value: stats.emprestimos.ativos,
-      sub: 'em circulação',
-      icon: BookMarked,
-      bg: 'bg-green-50',
-      text: 'text-green-700',
-      grad: 'from-green-500 to-green-600',
-    },
-    {
-      title: 'Em Atraso',
-      value: stats.emprestimos.emAtraso,
-      sub: 'devoluções pendentes',
-      icon: Clock,
-      bg: 'bg-orange-50',
-      text: 'text-orange-700',
-      grad: 'from-orange-500 to-orange-600',
-    },
-    {
-      title: 'Membros Ativos',
-      value: stats.usuarios.total,
-      sub: `${stats.emprestimos.total} empréstimos no total`,
-      icon: Users,
-      bg: 'bg-purple-50',
-      text: 'text-purple-700',
-      grad: 'from-purple-500 to-purple-600',
-    },
-  ]
 
   return (
     <div className="space-y-10 pb-12">
 
+      <PageHeader
+        title="Relatórios"
+        description="Indicadores, histórico e exportação de dados"
+        breadcrumb={<ReportsBreadcrumb />}
+      />
+
       {/* KPI Cards */}
-      <section className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {kpis.map((kpi, i) => {
-          const Icon = kpi.icon
-          return (
-            <Card
-              key={i}
-              className={cn(
-                'overflow-hidden border border-slate-200 hover:shadow-md transition-shadow',
-                kpi.bg,
-              )}
-            >
-              <div className="p-8">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      {kpi.title}
-                    </p>
-                    <p className={cn('mt-3 text-4xl font-bold', kpi.text)}>
-                      {kpi.value.toLocaleString('pt-BR')}
-                    </p>
-                    <p className="mt-2 text-xs text-slate-500">{kpi.sub}</p>
-                  </div>
-                  <div className={cn('p-3 rounded-lg bg-linear-to-br', kpi.grad)}>
-                    <Icon className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-              </div>
-            </Card>
-          )
-        })}
+      <section className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard
+          label="Total do Acervo"
+          value={stats.acervo.total.toLocaleString('pt-BR')}
+          description={`${stats.acervo.disponivel} disponíveis`}
+          icon={<BookOpen className="size-5" />}
+          accent="brand"
+        />
+        <KpiCard
+          label="Emprestados"
+          value={stats.emprestimos.ativos.toLocaleString('pt-BR')}
+          description="em circulação"
+          icon={<BookMarked className="size-5" />}
+          accent="success"
+        />
+        <KpiCard
+          label="Em Atraso"
+          value={stats.emprestimos.emAtraso.toLocaleString('pt-BR')}
+          description="devoluções pendentes"
+          icon={<Clock className="size-5" />}
+          accent="warning"
+        />
+        <KpiCard
+          label="Membros Ativos"
+          value={stats.usuarios.total.toLocaleString('pt-BR')}
+          description={`${stats.emprestimos.total} empréstimos no total`}
+          icon={<Users className="size-5" />}
+          accent="neutral"
+        />
       </section>
 
       {/* Chart + Overdue */}
       <section className="grid gap-8 grid-cols-1 md:grid-cols-3">
         <Card className="md:col-span-2 border border-slate-200 p-6">
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <h3 className="font-semibold text-slate-900">Empréstimos por Período</h3>
-                <p className="mt-1 text-sm text-slate-600">Evolução diária</p>
+                <p className="mt-1 text-sm text-slate-500">Evolução diária</p>
               </div>
-              <select
-                value={period}
-                onChange={e => setPeriod(Number(e.target.value) as 7 | 30 | 90)}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 hover:border-slate-300 focus:outline-none"
-              >
-                <option value={7}>Últimos 7 dias</option>
-                <option value={30}>Últimos 30 dias</option>
-                <option value={90}>Últimos 90 dias</option>
-              </select>
+              <div className="flex items-center gap-1.5">
+                {PERIOD_OPTIONS.map(opt => (
+                  <Button
+                    key={opt.value}
+                    variant={period === opt.value ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setPeriod(opt.value)}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
             </div>
             {chartData.length === 0 ? (
               <div className="flex items-center justify-center h-[250px] text-slate-400 text-sm">
@@ -256,7 +286,7 @@ export function ReportsView() {
                       borderRadius: '8px',
                       color: '#f1f5f9',
                     }}
-                    formatter={(value: number) => [value, 'Empréstimos']}
+                    formatter={(value) => [Number(value ?? 0), 'Empréstimos']}
                   />
                   <Line
                     type="monotone"
@@ -278,18 +308,18 @@ export function ReportsView() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-slate-900">Em Atraso</h3>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-slate-500">
                   {stats.emprestimos.atrasados.length} pendentes
                 </p>
               </div>
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50">
-                <AlertCircle className="h-5 w-5 text-orange-600" />
+                <AlertCircle className="h-5 w-5 text-orange-600" aria-hidden />
               </div>
             </div>
             <div className="space-y-3 max-h-[250px] overflow-y-auto pr-1">
               {stats.emprestimos.atrasados.length === 0 ? (
                 <p className="text-sm text-slate-400 text-center py-8">
-                  Nenhum atraso. 🎉
+                  Nenhum atraso no momento.
                 </p>
               ) : (
                 stats.emprestimos.atrasados.map((item, i) => (
@@ -301,7 +331,7 @@ export function ReportsView() {
                       <p className="font-medium text-slate-900 truncate text-sm">{item.titulo}</p>
                       <p className="text-xs text-slate-500 truncate">{item.nomeCompleto}</p>
                     </div>
-                    <div className="text-right ml-3 flex-shrink-0">
+                    <div className="text-right ml-3 shrink-0">
                       <p className="font-semibold text-red-600 text-sm">
                         {item.diasAtraso} {item.diasAtraso === 1 ? 'dia' : 'dias'}
                       </p>
@@ -320,7 +350,7 @@ export function ReportsView() {
         <Card className="border border-slate-200 p-6">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-blue-500" />
+              <TrendingUp className="h-5 w-5 text-blue-500" aria-hidden />
               <h3 className="font-semibold text-slate-900">Livros Mais Emprestados</h3>
             </div>
             {stats.emprestimos.maisEmprestados.length === 0 ? (
@@ -334,7 +364,7 @@ export function ReportsView() {
                     key={i}
                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors"
                   >
-                    <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-700 text-sm font-bold">
+                    <span className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-700 text-sm font-bold">
                       {i + 1}
                     </span>
                     <div className="flex-1 min-w-0">
@@ -343,7 +373,7 @@ export function ReportsView() {
                         <p className="text-xs text-slate-500 truncate">{book.autor}</p>
                       )}
                     </div>
-                    <span className="flex-shrink-0 text-sm font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded">
+                    <span className="shrink-0 text-sm font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded">
                       {book.totalEmprestimos}x
                     </span>
                   </div>
@@ -357,7 +387,7 @@ export function ReportsView() {
           <div className="space-y-4">
             <div>
               <h3 className="font-semibold text-slate-900">Acervo por Assunto</h3>
-              <p className="mt-1 text-sm text-slate-600">Distribuição dos exemplares</p>
+              <p className="mt-1 text-sm text-slate-500">Distribuição dos exemplares</p>
             </div>
             {stats.assuntos.length === 0 ? (
               <div className="flex items-center justify-center h-[250px] text-slate-400 text-sm">
@@ -390,7 +420,7 @@ export function ReportsView() {
                       borderRadius: '8px',
                       color: '#f1f5f9',
                     }}
-                    formatter={(value: number, name: string) => [`${value} exemplares`, name]}
+                    formatter={(value, name) => [`${value ?? 0} exemplares`, String(name ?? '')]}
                   />
                   <Legend
                     verticalAlign="bottom"
@@ -410,14 +440,14 @@ export function ReportsView() {
       <section className="space-y-4">
         <div>
           <h2 className="font-semibold text-slate-900">Exportar Dados</h2>
-          <p className="text-sm text-slate-600 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             Gere arquivos para sincronização e backup externo
           </p>
         </div>
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
           {EXPORT_ITEMS.map(({ tipo, label }) => {
             const xlsxKey = `${tipo}-xlsx`
-            const csvKey = `${tipo}-csv`
+            const csvKey  = `${tipo}-csv`
             return (
               <Card key={tipo} className="border border-slate-200 p-6">
                 <div className="space-y-4">
@@ -426,9 +456,10 @@ export function ReportsView() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1"
+                      className="flex-1 gap-1.5"
                       onClick={() => handleExport(tipo, 'xlsx')}
-                      disabled={exportLoading === xlsxKey}
+                      disabled={!!exportLoading}
+                      aria-label={`Exportar ${label} como Excel`}
                     >
                       {exportLoading === xlsxKey ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -440,9 +471,10 @@ export function ReportsView() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1"
+                      className="flex-1 gap-1.5"
                       onClick={() => handleExport(tipo, 'csv')}
-                      disabled={exportLoading === csvKey}
+                      disabled={!!exportLoading}
+                      aria-label={`Exportar ${label} como CSV`}
                     >
                       {exportLoading === csvKey ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

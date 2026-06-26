@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { acervoService } from '@/src/services/acervo.service'
-import { validateAcervoUpdate } from '@/src/validators/acervo'
+import { exemplarService } from '@/src/services/exemplar.service'
+import { ExemplarUpdateSchema } from '@/src/types/exemplar'
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: idStr } = await params
     const id = parseInt(idStr, 10)
-    if (isNaN(id)) {
-      return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
-    }
+    if (isNaN(id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
 
-    const acervo = await acervoService.getAcervoById(id)
-    return NextResponse.json(acervo)
+    const exemplar = await exemplarService.buscarPorId(id)
+    return NextResponse.json(exemplar)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro ao obter exemplar'
     return NextResponse.json({ error: message }, { status: 404 })
@@ -28,19 +26,20 @@ export async function PUT(
   try {
     const { id: idStr } = await params
     const id = parseInt(idStr, 10)
-    if (isNaN(id)) {
-      return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
-    }
+    if (isNaN(id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
 
     const body = await request.json()
-    const validation = validateAcervoUpdate(body)
+    const parsed = ExemplarUpdateSchema.safeParse(body)
 
-    if (!validation.valid || !validation.data) {
-      return NextResponse.json({ error: validation.errors }, { status: 400 })
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Dados inválidos', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      )
     }
 
-    const acervo = await acervoService.updateAcervo(id, validation.data)
-    return NextResponse.json(acervo)
+    const exemplar = await exemplarService.atualizar(id, parsed.data)
+    return NextResponse.json(exemplar)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro ao atualizar exemplar'
     return NextResponse.json({ error: message }, { status: 500 })
@@ -48,17 +47,15 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: idStr } = await params
     const id = parseInt(idStr, 10)
-    if (isNaN(id)) {
-      return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
-    }
+    if (isNaN(id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
 
-    await acervoService.deleteAcervo(id)
+    await exemplarService.inativar(id)
     return NextResponse.json({ success: true })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro ao deletar exemplar'

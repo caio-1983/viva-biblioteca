@@ -52,11 +52,14 @@ export function CategoriesChart() {
             <Legend
               verticalAlign="bottom"
               height={36}
-              formatter={(value, entry) => (
-                <span className="text-xs text-slate-600">
-                  {entry.payload.name} ({entry.payload.value}%)
-                </span>
-              )}
+              formatter={(value, entry) => {
+                const p = entry.payload as { name?: string; value?: number } | undefined
+                return (
+                  <span className="text-xs text-slate-600">
+                    {p?.name ?? value} ({p?.value ?? 0}%)
+                  </span>
+                )
+              }}
             />
           </PieChart>
         </ResponsiveContainer>

@@ -1,89 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Database from 'better-sqlite3'
-import path from 'path'
+import { emprestimoService } from '@/src/services/emprestimo.service'
+import { devolucaoService } from '@/src/services/devolucao.service'
+import { toEmprestimoAtivoDTO } from '@/src/dto/emprestimo.dto'
 
-const DB_PATH = path.join(process.cwd(), 'storage', 'database', 'biblioteca.db')
-
-// GET /api/returns?exemplar=EX000001
 export async function GET(request: NextRequest) {
-  const exemplar = request.nextUrl.searchParams.get('exemplar')?.trim()
+  const sp = request.nextUrl.searchParams
+  const codigoExemplar = sp.get('exemplar')?.trim()
+  const tombo          = sp.get('tombo')?.trim()
+  const codigoBarras   = sp.get('codigoBarras')?.trim()
 
-  if (!exemplar) {
-    return NextResponse.json({ error: 'Informe o número do exemplar' }, { status: 400 })
+  if (!codigoExemplar && !tombo && !codigoBarras) {
+    return NextResponse.json({ error: 'Informe exemplar, tombo ou codigoBarras' }, { status: 400 })
   }
 
   try {
-    const db = new Database(DB_PATH, { readonly: true })
+    let emprestimo
 
-    const row = db.prepare(`
-      SELECT
-        e.id              AS emprestimoId,
-        e.dataEmprestimo,
-        e.dataPrevistaDevolucao,
-        e.status          AS statusEmprestimo,
-        a.id              AS acervoId,
-        a.numeroExemplar,
-        a.titulo,
-        u.id              AS usuarioId,
-        u.nomeCompleto,
-        u.numeroCadastro
-      FROM Emprestimo e
-      JOIN Acervo   a ON a.id = e.acervoId
-      JOIN Usuario  u ON u.id = e.usuarioId
-      WHERE a.numeroExemplar = ?
-        AND e.status = 'ATIVO'
-      LIMIT 1
-    `).get(exemplar) as Record<string, unknown> | undefined
-
-    db.close()
-
-    if (!row) {
-      return NextResponse.json({ error: 'Nenhum empréstimo ativo encontrado para este exemplar' }, { status: 404 })
+    if (codigoExemplar) {
+      emprestimo = await emprestimoService.buscarAtivoByCodigoExemplar(codigoExemplar)
+    } else if (tombo) {
+      emprestimo = await emprestimoService.buscarAtivoByTombo(tombo)
+    } else {
+      emprestimo = await emprestimoService.buscarAtivoByCodigoBarras(codigoBarras!)
     }
 
-    return NextResponse.json(row)
+    return NextResponse.json(toEmprestimoAtivoDTO(emprestimo))
   } catch (error) {
-    console.error('Erro ao buscar empréstimo:', error)
-    return NextResponse.json({ error: 'Erro ao buscar empréstimo' }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'Erro ao buscar empréstimo'
+    const isNotFound = message.includes('não encontrado')
+    return NextResponse.json({ error: message }, { status: isNotFound ? 404 : 500 })
   }
 }
 
-// POST /api/returns  { emprestimoId, acervoId }
 export async function POST(request: NextRequest) {
   try {
-    const { emprestimoId, acervoId } = await request.json()
+    const { emprestimoId, exemplarId } = await request.json()
 
-    if (!emprestimoId || !acervoId) {
-      return NextResponse.json({ error: 'emprestimoId e acervoId são obrigatórios' }, { status: 400 })
+    if (!emprestimoId || !exemplarId) {
+      return NextResponse.json(
+        { error: 'emprestimoId e exemplarId são obrigatórios' },
+        { status: 400 }
+      )
     }
 
-    const db = new Database(DB_PATH)
-
-    const emprestimo = db.prepare(
-      "SELECT id FROM Emprestimo WHERE id = ? AND status = 'ATIVO'"
-    ).get(emprestimoId)
-
-    if (!emprestimo) {
-      db.close()
-      return NextResponse.json({ error: 'Empréstimo não encontrado ou já devolvido' }, { status: 404 })
-    }
-
-    db.prepare(`
-      UPDATE Emprestimo
-      SET dataDevolucao = datetime('now'), status = 'DEVOLVIDO'
-      WHERE id = ?
-    `).run(emprestimoId)
-
-    db.prepare(`
-      UPDATE Acervo
-      SET status = 'DISPONIVEL', updatedAt = datetime('now')
-      WHERE id = ?
-    `).run(acervoId)
-
-    db.close()
-    return NextResponse.json({ success: true })
+    const result = await devolucaoService.registrar(Number(emprestimoId), Number(exemplarId))
+    return NextResponse.json(result)
   } catch (error) {
-    console.error('Erro ao registrar devolução:', error)
-    return NextResponse.json({ error: 'Erro ao registrar devolução' }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'Erro ao registrar devolução'
+    const isNotFound = message.includes('não encontrado')
+    return NextResponse.json({ error: message }, { status: isNotFound ? 404 : 500 })
   }
 }

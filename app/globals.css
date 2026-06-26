@@ -4,6 +4,47 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ─── VIVA Design System — Color Tokens ─── */
+@theme {
+  /* Brand */
+  --color-brand-50:  oklch(0.97 0.02 255);
+  --color-brand-100: oklch(0.93 0.05 255);
+  --color-brand-200: oklch(0.86 0.09 255);
+  --color-brand-300: oklch(0.75 0.13 255);
+  --color-brand-400: oklch(0.62 0.17 255);
+  --color-brand-500: oklch(0.50 0.20 255);
+  --color-brand-600: oklch(0.43 0.20 255);
+  --color-brand-700: oklch(0.36 0.18 255);
+  --color-brand-800: oklch(0.28 0.14 255);
+  --color-brand-900: oklch(0.20 0.10 255);
+
+  /* Status — domínio biblioteca */
+  --color-status-available:   oklch(0.55 0.15 145);   /* disponível */
+  --color-status-borrowed:    oklch(0.50 0.18 255);   /* emprestado */
+  --color-status-overdue:     oklch(0.58 0.18 30);    /* atrasado   */
+  --color-status-reserved:    oklch(0.60 0.15 75);    /* reservado  */
+  --color-status-inactive:    oklch(0.55 0.00 0);     /* inativo    */
+  --color-status-maintenance: oklch(0.55 0.14 300);   /* manutenção */
+
+  /* Status backgrounds (light) */
+  --color-status-available-bg:   oklch(0.96 0.04 145);
+  --color-status-borrowed-bg:    oklch(0.95 0.04 255);
+  --color-status-overdue-bg:     oklch(0.96 0.05 30);
+  --color-status-reserved-bg:    oklch(0.96 0.04 75);
+  --color-status-inactive-bg:    oklch(0.95 0.00 0);
+  --color-status-maintenance-bg: oklch(0.96 0.04 300);
+
+  /* Spacing scale oficial: 4 · 8 · 12 · 16 · 24 · 32 · 48 · 64 */
+  --spacing-ds-1:  0.25rem;  /* 4px  */
+  --spacing-ds-2:  0.5rem;   /* 8px  */
+  --spacing-ds-3:  0.75rem;  /* 12px */
+  --spacing-ds-4:  1rem;     /* 16px */
+  --spacing-ds-6:  1.5rem;   /* 24px */
+  --spacing-ds-8:  2rem;     /* 32px */
+  --spacing-ds-12: 3rem;     /* 48px */
+  --spacing-ds-16: 4rem;     /* 64px */
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -56,32 +97,32 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --primary: oklch(0.50 0.20 255);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --accent: oklch(0.95 0.04 255);
+  --accent-foreground: oklch(0.43 0.20 255);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --ring: oklch(0.50 0.20 255);
+  --chart-1: oklch(0.50 0.20 255);
+  --chart-2: oklch(0.55 0.15 145);
+  --chart-3: oklch(0.58 0.18 30);
+  --chart-4: oklch(0.60 0.15 75);
+  --chart-5: oklch(0.55 0.14 300);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary: oklch(0.50 0.20 255);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-accent: oklch(0.95 0.04 255);
+  --sidebar-accent-foreground: oklch(0.43 0.20 255);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: oklch(0.50 0.20 255);
 }
 
 .dark {
@@ -91,31 +132,31 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: oklch(0.70 0.18 255);
+  --primary-foreground: oklch(0.145 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --accent: oklch(0.25 0.06 255);
+  --accent-foreground: oklch(0.80 0.12 255);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --ring: oklch(0.70 0.18 255);
+  --chart-1: oklch(0.70 0.18 255);
+  --chart-2: oklch(0.65 0.14 145);
+  --chart-3: oklch(0.68 0.16 30);
+  --chart-4: oklch(0.70 0.13 75);
+  --chart-5: oklch(0.65 0.12 300);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary: oklch(0.70 0.18 255);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.25 0.06 255);
+  --sidebar-accent-foreground: oklch(0.80 0.12 255);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.70 0.18 255);
 }
 
 @layer base {
@@ -128,54 +169,36 @@
   body {
     @apply bg-slate-50 text-slate-900 font-sans;
   }
+}
 
-  /* Hierarquia Tipográfica */
-  h1 {
-    @apply text-4xl font-bold tracking-tight text-slate-900;
+/* ─── VIVA DS — Tipografia ─── */
+@layer utilities {
+  /* Page Title — h1 de página */
+  .ds-page-title {
+    @apply text-2xl font-bold tracking-tight text-slate-900 leading-tight;
   }
-  h2 {
-    @apply text-2xl font-bold text-slate-900;
+  /* Section Title — título de seção dentro da página */
+  .ds-section-title {
+    @apply text-lg font-semibold text-slate-800 leading-snug;
   }
-  h3 {
-    @apply text-lg font-semibold text-slate-900;
+  /* Card Title — título dentro de card */
+  .ds-card-title {
+    @apply text-base font-semibold text-slate-900 leading-snug;
   }
-  h4 {
-    @apply text-base font-semibold text-slate-900;
+  /* Body — texto corrido */
+  .ds-body {
+    @apply text-sm text-slate-700 leading-relaxed;
   }
-  h5 {
-    @apply text-sm font-semibold text-slate-900;
+  /* Caption — metadado, data, autor */
+  .ds-caption {
+    @apply text-xs text-slate-500 leading-normal;
   }
-  h6 {
-    @apply text-sm font-medium text-slate-700;
+  /* Helper — mensagem de ajuda / validação */
+  .ds-helper {
+    @apply text-xs text-slate-400 leading-normal;
   }
-
-  /* Padrão de Subtítulos */
-  .subtitle {
-    @apply text-sm text-slate-500 font-normal;
-  }
-
-  /* Padrão para Labels em KPIs e Tabelas */
-  .label-small {
-    @apply text-xs uppercase tracking-wide text-slate-500 font-semibold;
-  }
-
-  /* Padrão para Card Titles */
-  .card-title {
-    @apply text-lg font-semibold text-slate-900;
-  }
-
-  /* Padrão para Card Descriptions */
-  .card-description {
-    @apply text-sm text-slate-500;
-  }
-
-  /* Padrão para Table Headers */
-  .table-header {
-    @apply text-xs uppercase font-semibold text-slate-500;
-  }
-
-  /* Padrão para Table Content */
-  .table-content {
-    @apply text-sm font-medium text-slate-900;
+  /* Label — label de campo */
+  .ds-label {
+    @apply text-sm font-medium text-slate-700 leading-none;
   }
 }
