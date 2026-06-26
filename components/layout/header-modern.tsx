@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Menu, Bell, User } from 'lucide-react'
+import { Menu, Bell, User, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { usePageTitle } from '@/components/page-context'
 
@@ -70,6 +70,27 @@ export function HeaderModern({ onMenuClick }: HeaderModernProps) {
 
           {/* Right section - Actions and user */}
           <div className="flex items-center gap-4">
+            {/* Global search trigger */}
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('viva:search:open'))}
+              className="hidden md:flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+            >
+              <Search className="h-4 w-4" />
+              <span>Pesquisar…</span>
+              <kbd className="ml-2 inline-flex items-center rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs font-mono text-slate-400">
+                Ctrl+K
+              </kbd>
+            </button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 text-slate-600 hover:text-slate-900 md:hidden"
+              onClick={() => window.dispatchEvent(new CustomEvent('viva:search:open'))}
+              aria-label="Pesquisar"
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+
             <Button
               variant="ghost"
               size="icon"

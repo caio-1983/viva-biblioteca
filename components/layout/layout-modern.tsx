@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { SidebarModern } from './sidebar-modern'
 import { HeaderModern } from './header-modern'
+import { CommandCenter } from '@/components/search/command-center'
 
 interface LayoutModernProps {
   children: React.ReactNode
@@ -13,6 +14,9 @@ export function LayoutModern({ children }: LayoutModernProps) {
 
   return (
     <div className="flex h-screen bg-slate-50">
+      {/* Global Command Center — Ctrl+K */}
+      <CommandCenter />
+
       {/* Sidebar */}
       <SidebarModern open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
