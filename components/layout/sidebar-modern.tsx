@@ -33,8 +33,8 @@ const menuItems = [
     icon: ArrowLeftRight,
   },
   {
-    label: 'Acervo',
-    href: '/books',
+    label: 'Catálogo',
+    href: '/acervo/consulta',
     icon: BookOpen,
   },
   {

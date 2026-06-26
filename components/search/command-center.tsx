@@ -76,15 +76,14 @@ const LS_HISTORY = 'viva:search:history'
 const LS_PINS    = 'viva:search:pins'
 
 const STATIC_ACTIONS: ActionDef[] = [
-  { id: 'dashboard',    label: 'Dashboard',       desc: 'Painel principal',           href: '/',            keywords: ['dashboard', 'inicio', 'painel', 'home'],                     Icon: LayoutDashboard },
-  { id: 'circulacao',   label: 'Circulação',      desc: 'Empréstimos e devoluções',   href: '/circulacao',  keywords: ['circulacao', 'emprestimo', 'devolucao', 'renovacao'],         Icon: ArrowLeftRight  },
-  { id: 'inventario',   label: 'Inventário',      desc: 'Conferência patrimonial',    href: '/inventario',  keywords: ['inventario', 'conferencia', 'patrimonio'],                    Icon: ClipboardList   },
-  { id: 'nova-obra',    label: 'Nova obra',        desc: 'Cadastrar novo título',      href: '/books/new',   keywords: ['nova', 'obra', 'livro', 'criar', 'novo', 'cadastrar'],        Icon: BookPlus        },
-  { id: 'novo-leitor',  label: 'Novo leitor',      desc: 'Cadastrar leitor',           href: '/members/new', keywords: ['novo', 'leitor', 'membro', 'usuario', 'criar', 'cadastrar'],  Icon: UserPlus        },
-  { id: 'acervo',       label: 'Acervo',           desc: 'Catálogo de obras',          href: '/books',       keywords: ['acervo', 'catalogo', 'livros', 'obras'],                     Icon: BookOpen        },
-  { id: 'leitores',     label: 'Leitores',         desc: 'Gerenciar leitores',         href: '/members',     keywords: ['leitores', 'membros', 'usuarios', 'alunos'],                 Icon: Users           },
-  { id: 'relatorios',   label: 'Relatórios',       desc: 'Estatísticas do sistema',    href: '/reports',     keywords: ['relatorios', 'estatisticas', 'relatorio'],                   Icon: BarChart3       },
-  { id: 'config',       label: 'Configurações',    desc: 'Ajustes do sistema',         href: '/settings',    keywords: ['configuracoes', 'settings', 'ajustes'],                      Icon: Cog             },
+  { id: 'dashboard',    label: 'Dashboard',       desc: 'Painel principal',              href: '/',                 keywords: ['dashboard', 'inicio', 'painel', 'home'],                                  Icon: LayoutDashboard },
+  { id: 'circulacao',   label: 'Circulação',      desc: 'Empréstimos e devoluções',      href: '/circulacao',       keywords: ['circulacao', 'emprestimo', 'devolucao', 'renovacao'],                      Icon: ArrowLeftRight  },
+  { id: 'inventario',   label: 'Inventário',      desc: 'Conferência patrimonial',       href: '/inventario',       keywords: ['inventario', 'conferencia', 'patrimonio'],                                 Icon: ClipboardList   },
+  { id: 'nova-obra',    label: 'Nova obra',        desc: 'Catalogar novo título',         href: '/acervo/cadastro',  keywords: ['nova', 'obra', 'livro', 'criar', 'novo', 'cadastrar', 'catalogar'],        Icon: BookPlus        },
+  { id: 'catalogo',     label: 'Catálogo',         desc: 'Acervo de obras e exemplares', href: '/acervo/consulta',  keywords: ['catalogo', 'acervo', 'livros', 'obras', 'exemplares', 'busca'],             Icon: BookOpen        },
+  { id: 'leitores',     label: 'Leitores',         desc: 'Perfil e histórico de leitores', href: '/members',        keywords: ['leitores', 'membros', 'usuarios', 'alunos'],                               Icon: Users           },
+  { id: 'relatorios',   label: 'Relatórios',       desc: 'Estatísticas do sistema',      href: '/reports',          keywords: ['relatorios', 'estatisticas', 'relatorio'],                                 Icon: BarChart3       },
+  { id: 'admin',        label: 'Administração',    desc: 'Configurações e importações',  href: '/settings',         keywords: ['administracao', 'configuracoes', 'settings', 'ajustes', 'importacao'],      Icon: Cog             },
 ]
 
 const QUERY_TYPE_LABELS: Record<QueryType, string> = {
