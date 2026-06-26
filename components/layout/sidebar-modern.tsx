@@ -6,8 +6,6 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
-  BookMarked,
-  RotateCcw,
   BookOpen,
   Users,
   BarChart3,
@@ -15,6 +13,7 @@ import {
   LogOut,
   Menu,
   ArrowLeftRight,
+  ClipboardList,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -37,6 +36,11 @@ const menuItems = [
     label: 'Acervo',
     href: '/books',
     icon: BookOpen,
+  },
+  {
+    label: 'Inventário',
+    href: '/inventario',
+    icon: ClipboardList,
   },
   {
     label: 'Usuário',
