@@ -19,6 +19,8 @@ import { Label }              from '@/components/ui/label'
 import { StatusBadge }        from '@/components/ui/status-badge'
 import { Drawer }             from '@/components/ui/drawer'
 import { ConfirmDialog }      from '@/components/ui/confirm-dialog'
+import { Skeleton }           from '@/components/ui/loading-state'
+import { useToast }           from '@/components/ui/toast'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -331,17 +333,19 @@ function ImportDrawer({ open, onClose }: { open: boolean; onClose: () => void })
 // ─── AdminWorkspace ───────────────────────────────────────────────────────────
 
 export function AdminWorkspace() {
+  const { toast } = useToast()
+
   // Config state
-  const [config,    setConfig]    = useState<Configuracao | null>(null)
-  const [loadErr,   setLoadErr]   = useState(false)
-  const [prazo,     setPrazo]     = useState('')
-  const [maxEmpr,   setMaxEmpr]   = useState('')
-  const [backup,    setBackup]    = useState('')
-  const [exportDir, setExportDir] = useState('')
-  const [saving,    setSaving]    = useState(false)
-  const [saveOk,    setSaveOk]    = useState(false)
-  const [saveErr,   setSaveErr]   = useState<string | null>(null)
-  const [dirty,     setDirty]     = useState(false)
+  const [config,        setConfig]        = useState<Configuracao | null>(null)
+  const [configLoading, setConfigLoading] = useState(true)
+  const [loadErr,       setLoadErr]       = useState(false)
+  const [prazo,         setPrazo]         = useState('')
+  const [maxEmpr,       setMaxEmpr]       = useState('')
+  const [backup,        setBackup]        = useState('')
+  const [exportDir,     setExportDir]     = useState('')
+  const [saving,        setSaving]        = useState(false)
+  const [saveErr,       setSaveErr]       = useState<string | null>(null)
+  const [dirty,         setDirty]         = useState(false)
 
   // Import drawer
   const [importOpen, setImportOpen] = useState(false)
@@ -352,6 +356,8 @@ export function AdminWorkspace() {
 
   // Load config
   const loadConfig = useCallback(async () => {
+    setConfigLoading(true)
+    setLoadErr(false)
     try {
       const res = await fetch('/api/configuracoes')
       if (!res.ok) throw new Error()
@@ -363,12 +369,14 @@ export function AdminWorkspace() {
       setExportDir(data.pastaExportacao ?? '')
     } catch {
       setLoadErr(true)
+    } finally {
+      setConfigLoading(false)
     }
   }, [])
 
   useEffect(() => { loadConfig() }, [loadConfig])
 
-  function markDirty() { setDirty(true); setSaveOk(false); setSaveErr(null) }
+  function markDirty() { setDirty(true); setSaveErr(null) }
 
   async function handleSaveConfig() {
     const p = parseInt(prazo, 10)
@@ -376,7 +384,7 @@ export function AdminWorkspace() {
     if (isNaN(p) || p < 1 || p > 365) { setSaveErr('Prazo deve ser entre 1 e 365 dias.'); return }
     if (isNaN(m) || m < 1 || m > 99)  { setSaveErr('Limite deve ser entre 1 e 99.'); return }
 
-    setSaving(true); setSaveErr(null); setSaveOk(false)
+    setSaving(true); setSaveErr(null)
     try {
       const res = await fetch('/api/configuracoes', {
         method: 'PUT',
@@ -395,9 +403,10 @@ export function AdminWorkspace() {
       const updated: Configuracao = await res.json()
       setConfig(updated)
       setDirty(false)
-      setSaveOk(true)
+      toast({ variant: 'success', title: 'Configurações salvas', description: 'As alterações foram aplicadas com sucesso.' })
     } catch (e) {
       setSaveErr(e instanceof Error ? e.message : 'Erro ao salvar')
+      toast({ variant: 'error', title: 'Falha ao salvar', description: e instanceof Error ? e.message : 'Tente novamente.' })
     } finally {
       setSaving(false)
     }
@@ -409,7 +418,7 @@ export function AdminWorkspace() {
     setMaxEmpr(String(config.maxEmprestimos))
     setBackup(config.pastaBackup ?? '')
     setExportDir(config.pastaExportacao ?? '')
-    setDirty(false); setSaveOk(false); setSaveErr(null)
+    setDirty(false); setSaveErr(null)
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -437,7 +446,19 @@ export function AdminWorkspace() {
         description="Parâmetros de circulação e operação da biblioteca"
         badge="ativo"
       >
-        {loadErr ? (
+        {configLoading ? (
+          <div className="space-y-4 py-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between py-3">
+                <div className="space-y-1.5">
+                  <Skeleton className="h-3.5 w-44" />
+                  <Skeleton className="h-3 w-64" />
+                </div>
+                <Skeleton className="h-9 w-24 rounded-lg" />
+              </div>
+            ))}
+          </div>
+        ) : loadErr ? (
           <div className="flex items-center gap-2 text-sm text-red-600">
             <AlertTriangle className="size-4" />
             Não foi possível carregar as configurações.{' '}
@@ -547,11 +568,6 @@ export function AdminWorkspace() {
             {/* Feedback + actions */}
             <div className="pt-4 flex items-center justify-between gap-3">
               <div>
-                {saveOk && (
-                  <span className="flex items-center gap-1.5 text-sm text-emerald-600">
-                    <CheckCircle2 className="size-4" /> Configurações salvas
-                  </span>
-                )}
                 {saveErr && (
                   <span className="flex items-center gap-1.5 text-sm text-red-600">
                     <AlertTriangle className="size-4" /> {saveErr}

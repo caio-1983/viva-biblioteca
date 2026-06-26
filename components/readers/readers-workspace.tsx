@@ -15,6 +15,7 @@ import { Modal, ModalCloseButton } from '@/components/ui/modal'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Card, CardContent } from '@/components/ui/card'
 import { ActionMenu } from '@/components/ui/action-menu'
+import { useToast } from '@/components/ui/toast'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -338,9 +339,12 @@ function ReturnModal({
 // ─── ReadersWorkspace ─────────────────────────────────────────────────────────
 
 export function ReadersWorkspace() {
+  const { toast } = useToast()
+
   const [leitores, setLeitores]           = useState<Leitor[]>([])
   const [allLoans, setAllLoans]           = useState<LoanListItem[]>([])
   const [dataLoading, setDataLoading]     = useState(true)
+  const [dataError, setDataError]         = useState(false)
 
   const [selectedId, setSelectedId]       = useState<number | null>(null)
   const [history, setHistory]             = useState<LoanHistoryItem[]>([])
@@ -351,12 +355,12 @@ export function ReadersWorkspace() {
 
   const [returnTarget, setReturnTarget]   = useState<LoanHistoryItem | null>(null)
   const [returnSubmitting, setReturnSubmitting] = useState(false)
-  const [returnError, setReturnError]     = useState<string | null>(null)
 
   // ── Load list data ────────────────────────────────────────────────────────
 
   const loadData = useCallback(async () => {
     setDataLoading(true)
+    setDataError(false)
     try {
       const [lRes, loansRes] = await Promise.all([
         fetch('/api/usuarios').then(r => r.json()),
@@ -365,6 +369,8 @@ export function ReadersWorkspace() {
       setLeitores(Array.isArray(lRes) ? lRes : (lRes.data ?? []))
       const rawLoans = Array.isArray(loansRes) ? loansRes : (loansRes.data ?? [])
       setAllLoans(rawLoans)
+    } catch {
+      setDataError(true)
     } finally {
       setDataLoading(false)
     }
@@ -444,7 +450,6 @@ export function ReadersWorkspace() {
   async function confirmReturn() {
     if (!returnTarget) return
     setReturnSubmitting(true)
-    setReturnError(null)
     try {
       const res = await fetch('/api/returns', {
         method: 'POST',
@@ -453,7 +458,7 @@ export function ReadersWorkspace() {
       })
       if (!res.ok) throw new Error('Erro ao processar devolução')
       setReturnTarget(null)
-      // Reload history + global loans
+      toast({ variant: 'success', title: 'Devolução registrada', description: `"${returnTarget.titulo}" devolvido com sucesso.` })
       if (selectedId) {
         fetch(`/api/usuarios/${selectedId}/emprestimos`)
           .then(r => r.json())
@@ -462,8 +467,8 @@ export function ReadersWorkspace() {
       fetch('/api/loans').then(r => r.json()).then(data => {
         setAllLoans(Array.isArray(data) ? data : (data.data ?? []))
       })
-    } catch (e) {
-      setReturnError(e instanceof Error ? e.message : 'Erro')
+    } catch {
+      toast({ variant: 'error', title: 'Falha na devolução', description: 'Não foi possível registrar a devolução. Tente novamente.' })
     } finally {
       setReturnSubmitting(false)
     }
@@ -504,7 +509,13 @@ export function ReadersWorkspace() {
           {totalActive > 0 && <span className="text-blue-600">{totalActive} ativos</span>}
           {overdueCount > 0 && <span className="text-red-600">{overdueCount} com atraso</span>}
           <div className="flex-1" />
-          <Button size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-xs gap-1 opacity-50 cursor-not-allowed"
+            disabled
+            title="Requer endpoint POST /api/usuarios — funcionalidade em desenvolvimento"
+          >
             <UserPlus className="size-3" />
           </Button>
         </div>
@@ -515,6 +526,14 @@ export function ReadersWorkspace() {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="size-5 animate-spin text-slate-400" />
             </div>
+          ) : dataError ? (
+            <EmptyState
+              icon={<AlertTriangle className="size-7 text-red-400" />}
+              title="Erro ao carregar"
+              description="Não foi possível buscar os leitores."
+              action={<Button size="sm" variant="outline" onClick={loadData}>Tentar novamente</Button>}
+              size="sm"
+            />
           ) : filtered.length === 0 ? (
             <EmptyState icon={<Users className="size-8" />} title="Nenhum leitor" description="Tente outro termo de busca." size="sm" />
           ) : (
@@ -702,15 +721,10 @@ export function ReadersWorkspace() {
       <ReturnModal
         loan={returnTarget}
         open={!!returnTarget}
-        onClose={() => { setReturnTarget(null); setReturnError(null) }}
+        onClose={() => setReturnTarget(null)}
         onConfirm={confirmReturn}
         submitting={returnSubmitting}
       />
-      {returnError && (
-        <div className="fixed bottom-4 right-4 z-50 bg-red-600 text-white text-sm px-4 py-2 rounded-lg shadow-lg">
-          {returnError}
-        </div>
-      )}
     </div>
   )
 }

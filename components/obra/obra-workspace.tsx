@@ -22,6 +22,8 @@ import { Drawer }            from '@/components/ui/drawer'
 import { Input }             from '@/components/ui/input'
 import { EmptyState }        from '@/components/ui/empty-state'
 import { SkeletonCard, Spinner } from '@/components/ui/loading-state'
+import { ConfirmDialog }     from '@/components/ui/confirm-dialog'
+import { useToast }          from '@/components/ui/toast'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -913,6 +915,7 @@ function ObraBreadcrumb({ titulo }: { titulo?: string }) {
 export function ObraWorkspace({ obraId }: { obraId: number }) {
   const router = useRouter()
   const { setPageInfo } = usePageTitle()
+  const { toast } = useToast()
 
   const [exemplares,    setExemplares]    = useState<ExemplarDTO[]>([])
   const [loans,         setLoans]         = useState<LoanDTO[]>([])
@@ -923,6 +926,7 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
   const [editTarget,    setEditTarget]    = useState<ExemplarDTO | null>(null)
   const [addOpen,       setAddOpen]       = useState(false)
   const [statusFilter,  setStatusFilter]  = useState<string>('TODOS')
+  const [confirmBaixar, setConfirmBaixar] = useState<ExemplarDTO | null>(null)
 
   const obra = exemplares[0]
 
@@ -991,13 +995,25 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
 
   async function handleStatusChange(exemplar: ExemplarDTO, newStatus: ExemplarStatus) {
     try {
-      await fetch(`/api/acervo/${exemplar.id}`, {
+      const res = await fetch(`/api/acervo/${exemplar.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       })
+      if (!res.ok) throw new Error('Resposta inválida do servidor')
       await loadData()
-    } catch { /* UI shows no change — user can retry */ }
+      toast({ variant: 'success', title: 'Status atualizado', description: `Exemplar ${exemplar.codigoExemplar} atualizado.` })
+    } catch {
+      toast({ variant: 'error', title: 'Falha ao atualizar status', description: 'Não foi possível atualizar o exemplar. Tente novamente.' })
+    }
+  }
+
+  async function requestStatusChange(exemplar: ExemplarDTO, newStatus: ExemplarStatus) {
+    if (newStatus === 'BAIXADO') {
+      setConfirmBaixar(exemplar)
+    } else {
+      await handleStatusChange(exemplar, newStatus)
+    }
   }
 
   // ── Loading state ──────────────────────────────────────────────────────────
@@ -1218,7 +1234,7 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
                 lastLoan={lastLoanByCode.get(ex.codigoExemplar)}
                 onLoan={setLoanTarget}
                 onEdit={setEditTarget}
-                onStatusChange={handleStatusChange}
+                onStatusChange={requestStatusChange}
                 onReturn={setReturnTarget}
               />
             ))}
@@ -1377,6 +1393,19 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
         open={addOpen}
         onClose={() => setAddOpen(false)}
         obra={obra ?? null}
+      />
+
+      <ConfirmDialog
+        open={!!confirmBaixar}
+        onClose={() => setConfirmBaixar(null)}
+        onConfirm={async () => {
+          if (confirmBaixar) await handleStatusChange(confirmBaixar, 'BAIXADO')
+          setConfirmBaixar(null)
+        }}
+        intent="destructive"
+        title="Baixar exemplar?"
+        description={`O exemplar ${confirmBaixar?.codigoExemplar ?? ''} será marcado como baixado e ficará inativo no sistema. Esta ação não pode ser desfeita.`}
+        confirmLabel="Baixar exemplar"
       />
     </div>
   )

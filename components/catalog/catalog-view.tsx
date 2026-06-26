@@ -778,7 +778,7 @@ export function CatalogView() {
                 key={obra.obraId}
                 obra={obra}
                 onOpen={() => router.push(`/acervo/obra/${obra.obraId}`)}
-                onNewLoan={() => router.push(`/loans/new?obraId=${obra.obraId}`)}
+                onNewLoan={() => router.push('/circulacao')}
               />
             ))}
           </div>

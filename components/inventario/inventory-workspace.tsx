@@ -17,6 +17,8 @@ import { Drawer } from '@/components/ui/drawer'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/components/ui/page-header'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { useToast } from '@/components/ui/toast'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -128,10 +130,12 @@ interface QuickActionsDrawerProps {
 function QuickActionsDrawer({
   open, onClose, exemplar, detailLoading, onUpdated,
 }: QuickActionsDrawerProps) {
+  const { toast } = useToast()
   const [obs, setObs] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [obsDirty, setObsDirty] = useState(false)
+  const [confirmBaixar, setConfirmBaixar] = useState(false)
 
   useEffect(() => {
     if (exemplar) {
@@ -154,8 +158,11 @@ function QuickActionsDrawer({
       if (!res.ok) throw new Error('Erro ao atualizar status')
       const updated = await res.json() as ExemplarDetail
       onUpdated(updated)
+      toast({ variant: 'success', title: 'Status atualizado', description: `Exemplar ${exemplar.codigoExemplar} atualizado com sucesso.` })
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro desconhecido')
+      const msg = e instanceof Error ? e.message : 'Erro desconhecido'
+      setError(msg)
+      toast({ variant: 'error', title: 'Falha ao atualizar status', description: msg })
     } finally {
       setSubmitting(false)
     }
@@ -288,7 +295,7 @@ function QuickActionsDrawer({
                   size="sm"
                   className="gap-2 justify-start border-red-200 text-red-700 hover:bg-red-50"
                   disabled={submitting}
-                  onClick={() => changeStatus('BAIXADO')}
+                  onClick={() => setConfirmBaixar(true)}
                 >
                   <BookX className="size-4" />
                   Baixar exemplar
@@ -357,6 +364,20 @@ function QuickActionsDrawer({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmBaixar}
+        onClose={() => setConfirmBaixar(false)}
+        onConfirm={async () => {
+          setConfirmBaixar(false)
+          await changeStatus('BAIXADO')
+        }}
+        intent="destructive"
+        title="Baixar exemplar?"
+        description={`O exemplar ${exemplar?.codigoExemplar} será marcado como baixado e ficará inativo no sistema. Esta ação não pode ser desfeita.`}
+        confirmLabel="Baixar exemplar"
+        loading={submitting}
+      />
     </Drawer>
   )
 }
@@ -636,11 +657,17 @@ export function InventoryWorkspace() {
 
         {/* Data error */}
         {dataError && (
-          <div className="flex items-center gap-3 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-            <AlertTriangle className="size-4 shrink-0" />
-            Erro ao carregar o acervo.{' '}
-            <button onClick={loadData} className="underline">Tentar novamente</button>
-          </div>
+          <EmptyState
+            icon={<AlertTriangle className="size-7 text-red-400" />}
+            title="Não foi possível carregar o acervo"
+            description="Ocorreu um erro ao buscar os dados. Tente novamente."
+            action={
+              <Button variant="outline" size="sm" onClick={loadData} className="gap-2">
+                <RefreshCw className="size-4" />
+                Tentar novamente
+              </Button>
+            }
+          />
         )}
 
         {/* Tab Bar */}
