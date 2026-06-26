@@ -43,7 +43,7 @@ const menuItems = [
     icon: ClipboardList,
   },
   {
-    label: 'Usuário',
+    label: 'Leitores',
     href: '/members',
     icon: Users,
   },
