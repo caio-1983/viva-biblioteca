@@ -14,6 +14,7 @@ import {
   Cog,
   LogOut,
   Menu,
+  ArrowLeftRight,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -28,14 +29,9 @@ const menuItems = [
     icon: LayoutDashboard,
   },
   {
-    label: 'Novo Empréstimo',
-    href: '/loans/new',
-    icon: BookMarked,
-  },
-  {
-    label: 'Devoluções',
-    href: '/returns',
-    icon: RotateCcw,
+    label: 'Circulação',
+    href: '/circulacao',
+    icon: ArrowLeftRight,
   },
   {
     label: 'Acervo',
