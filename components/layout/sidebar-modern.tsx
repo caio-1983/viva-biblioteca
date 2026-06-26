@@ -53,7 +53,7 @@ const menuItems = [
     icon: BarChart3,
   },
   {
-    label: 'Configurações',
+    label: 'Administração',
     href: '/settings',
     icon: Cog,
   },
