@@ -6,7 +6,7 @@ import Link             from 'next/link'
 import {
   ArrowLeft, Plus, Pencil, BookOpen, BookMarked, Archive,
   CheckCircle, Clock, Wrench, Search, AlertTriangle,
-  ExternalLink, RefreshCw,
+  ExternalLink, RefreshCw, Undo2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -71,6 +71,20 @@ type UsuarioDTO = {
   ativo: boolean
 }
 
+// GET /api/returns?exemplar=<code> → EmprestimoAtivoDTO
+type EmprestimoAtivoDTO = {
+  emprestimoId: number
+  exemplarId: number
+  codigoExemplar: string
+  titulo: string
+  usuarioId: number
+  nomeCompleto: string
+  numeroCadastro: string
+  dataEmprestimo: string
+  dataPrevistaDevolucao: string
+  statusEmprestimo: string
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 type DSStatus = 'disponivel' | 'emprestado' | 'reservado' | 'inativo' | 'manutencao' | 'atrasado'
@@ -127,6 +141,29 @@ function CoverPlaceholder({ titulo, obraId, size = 'md' }: {
   )
 }
 
+// ── BookCover ─────────────────────────────────────────────────────────────────
+// Renders capaUrl when available; falls back to CoverPlaceholder.
+// Backend-ready: swap in the real field whenever GET /api/obras/:id exposes it.
+
+function BookCover({ capaUrl, titulo, obraId, size = 'md' }: {
+  capaUrl?: string | null
+  titulo: string
+  obraId: number
+  size?: 'sm' | 'md' | 'lg'
+}) {
+  const sz = { sm: 'w-10 h-14 rounded-md', md: 'w-14 h-20 rounded-lg', lg: 'w-20 h-28 rounded-xl' }
+  if (capaUrl) {
+    return (
+      <img
+        src={capaUrl}
+        alt={titulo}
+        className={cn(sz[size], 'object-cover shrink-0')}
+      />
+    )
+  }
+  return <CoverPlaceholder titulo={titulo} obraId={obraId} size={size} />
+}
+
 // ── MetaField ─────────────────────────────────────────────────────────────────
 
 function MetaField({ label, value, missing }: { label: string; value?: string | null; missing?: boolean }) {
@@ -143,15 +180,113 @@ function MetaField({ label, value, missing }: { label: string; value?: string | 
 
 // ── ExemplarCard ──────────────────────────────────────────────────────────────
 
-function ExemplarCard({ exemplar, lastLoan, onLoan, onEdit, onStatusChange }: {
+function ExemplarCard({ exemplar, lastLoan, onLoan, onEdit, onStatusChange, onReturn }: {
   exemplar: ExemplarDTO
   lastLoan: LoanDTO | undefined
   onLoan: (e: ExemplarDTO) => void
   onEdit: (e: ExemplarDTO) => void
   onStatusChange: (e: ExemplarDTO, s: ExemplarStatus) => Promise<void>
+  onReturn: (e: ExemplarDTO) => void
 }) {
-  const canLoan   = exemplar.status === 'DISPONIVEL'
-  const isInactive = exemplar.status === 'BAIXADO' || exemplar.status === 'EXTRAVIADO'
+  const isInactive  = exemplar.status === 'BAIXADO' || exemplar.status === 'EXTRAVIADO'
+  const isEmprestado = exemplar.status === 'EMPRESTADO'
+  const isOverdue   = isEmprestado && lastLoan
+    ? new Date(lastLoan.dataPrevistaDevolucao) < new Date()
+    : false
+
+  // ── Layout: EMPRESTADO ────────────────────────────────────────────────────
+  if (isEmprestado) {
+    return (
+      <Card className="border border-border/60 bg-white shadow-none">
+        <CardContent className="p-4">
+          {/* Status + menu */}
+          <div className="flex items-center justify-between mb-3">
+            <StatusBadge status="emprestado" label="Emprestado" />
+            <span onClick={e => e.stopPropagation()}>
+              <ActionMenu
+                align="end"
+                items={[
+                  {
+                    label: 'Editar exemplar',
+                    icon:  <Pencil className="size-4" />,
+                    onClick: () => onEdit(exemplar),
+                  },
+                  { label: '', onClick: () => {}, separator: true },
+                  {
+                    label: 'Marcar como Reservado',
+                    onClick: () => onStatusChange(exemplar, 'RESERVADO'),
+                  },
+                  {
+                    label: 'Enviar para Manutenção',
+                    onClick: () => onStatusChange(exemplar, 'MANUTENCAO'),
+                  },
+                  {
+                    label: 'Baixar exemplar',
+                    destructive: true,
+                    onClick: () => onStatusChange(exemplar, 'BAIXADO'),
+                  },
+                ]}
+              />
+            </span>
+          </div>
+
+          {/* Identificação */}
+          <div className="mb-3">
+            <p className="text-sm font-semibold font-mono text-slate-800">{exemplar.codigoExemplar}</p>
+            {exemplar.tombo && (
+              <p className="ds-caption text-slate-400 mt-0.5">Tombo {exemplar.tombo}</p>
+            )}
+          </div>
+
+          {/* Borrower block */}
+          <div className={cn(
+            'p-3 rounded-lg border mb-3',
+            isOverdue ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-border/40'
+          )}>
+            <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium mb-1.5">Com</p>
+            {lastLoan ? (
+              <>
+                <p className="text-sm font-medium text-slate-700">{lastLoan.nomeCompleto}</p>
+                <p className="ds-caption text-slate-400">{lastLoan.numeroCadastro}</p>
+                <div className={cn(
+                  'flex items-center gap-1.5 mt-2 pt-2 border-t',
+                  isOverdue ? 'border-red-100 text-red-600' : 'border-border/40 text-slate-400'
+                )}>
+                  {isOverdue
+                    ? <AlertTriangle className="size-3.5 shrink-0" />
+                    : <Clock className="size-3.5 shrink-0" />
+                  }
+                  <span className="ds-caption">
+                    {isOverdue ? 'Em atraso desde' : 'Devolver em'}{' '}
+                    {fmtDate(lastLoan.dataPrevistaDevolucao)}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <p className="ds-caption text-slate-400 italic">Dados do leitor indisponíveis</p>
+            )}
+          </div>
+
+          {exemplar.observacao && (
+            <p className="ds-caption text-slate-500 italic mb-3">{exemplar.observacao}</p>
+          )}
+
+          {/* Single primary action */}
+          <Button
+            size="sm"
+            className={cn('w-full gap-1.5', isOverdue && 'bg-red-600 hover:bg-red-700 focus-visible:ring-red-300')}
+            onClick={() => onReturn(exemplar)}
+          >
+            <Undo2 className="size-3.5" />
+            Receber devolução
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // ── Layout: padrão ────────────────────────────────────────────────────────
+  const canLoan = exemplar.status === 'DISPONIVEL'
 
   return (
     <Card className={cn(
@@ -280,14 +415,25 @@ function EmprestimoModal({ open, onClose, exemplar, onSuccess }: {
       .finally(() => setLoadingU(false))
   }, [open])
 
-  const filtered = useMemo(() =>
-    search.trim()
-      ? usuarios.filter(u =>
-          u.nomeCompleto.toLowerCase().includes(search.toLowerCase()) ||
-          u.numeroCadastro.includes(search)
-        )
-      : usuarios
-  , [usuarios, search])
+  const filtered = useMemo(() => {
+    const q = search.trim()
+    if (!q) return usuarios
+    // Exact match on numeroCadastro first (barcode scan path)
+    const byCode = usuarios.filter(u => u.numeroCadastro === q)
+    if (byCode.length > 0) return byCode
+    // Fuzzy by name or partial code
+    return usuarios.filter(u =>
+      u.nomeCompleto.toLowerCase().includes(q.toLowerCase()) ||
+      u.numeroCadastro.includes(q)
+    )
+  }, [usuarios, search])
+
+  // Auto-select when the query resolves to a single leitor (ex: código de barras)
+  useEffect(() => {
+    if (search.trim() && filtered.length === 1) {
+      setSelected(filtered[0].id)
+    }
+  }, [filtered, search])
 
   async function handleConfirm() {
     if (!selected || !exemplar) return
@@ -351,12 +497,19 @@ function EmprestimoModal({ open, onClose, exemplar, onSuccess }: {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
             <Input
-              placeholder="Nome ou número de cadastro..."
+              placeholder="Nome, matrícula ou código de barras..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-9"
+              autoFocus
             />
           </div>
+          {search.trim() && filtered.length === 1 && (
+            <p className="ds-caption text-brand-600 flex items-center gap-1.5">
+              <CheckCircle className="size-3.5" />
+              Leitor identificado automaticamente
+            </p>
+          )}
         </div>
 
         {/* Lista de leitores */}
@@ -403,6 +556,125 @@ function EmprestimoModal({ open, onClose, exemplar, onSuccess }: {
           </p>
         )}
       </div>
+    </Modal>
+  )
+}
+
+// ── DevolucaoModal ────────────────────────────────────────────────────────────
+
+function DevolucaoModal({ open, onClose, exemplar, onSuccess }: {
+  open: boolean
+  onClose: () => void
+  exemplar: ExemplarDTO | null
+  onSuccess: () => void
+}) {
+  const [emprestimo,  setEmprestimo]  = useState<EmprestimoAtivoDTO | null>(null)
+  const [loadingE,    setLoadingE]    = useState(false)
+  const [submitting,  setSubmitting]  = useState(false)
+  const [error,       setError]       = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open || !exemplar) return
+    setEmprestimo(null); setError(null)
+    setLoadingE(true)
+    fetch(`/api/returns?exemplar=${encodeURIComponent(exemplar.codigoExemplar)}`)
+      .then(r => {
+        if (!r.ok) throw new Error('Empréstimo ativo não encontrado')
+        return r.json()
+      })
+      .then(data => setEmprestimo(data))
+      .catch(e => setError(e instanceof Error ? e.message : 'Erro ao buscar empréstimo'))
+      .finally(() => setLoadingE(false))
+  }, [open, exemplar])
+
+  async function handleConfirm() {
+    if (!emprestimo || !exemplar) return
+    setSubmitting(true); setError(null)
+    try {
+      const res = await fetch('/api/returns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emprestimoId: emprestimo.emprestimoId,
+          exemplarId: exemplar.id,
+        }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.error ?? 'Erro ao registrar devolução')
+      }
+      onSuccess()
+      onClose()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao registrar devolução')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const isOverdue = emprestimo
+    ? new Date(emprestimo.dataPrevistaDevolucao) < new Date()
+    : false
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Receber Devolução"
+      description={exemplar ? `${exemplar.codigoExemplar} — ${exemplar.titulo}` : ''}
+      size="sm"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>Cancelar</Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={!emprestimo || submitting}
+            className={cn('gap-1.5', isOverdue && 'bg-red-600 hover:bg-red-700 focus-visible:ring-red-300')}
+          >
+            {submitting ? <Spinner size="sm" /> : <Undo2 className="size-3.5" />}
+            Confirmar Devolução
+          </Button>
+        </>
+      }
+    >
+      {loadingE ? (
+        <div className="flex justify-center py-10"><Spinner /></div>
+      ) : error ? (
+        <div className="flex items-start gap-2 p-4 bg-red-50 rounded-lg border border-red-100">
+          <AlertTriangle className="size-4 text-red-500 shrink-0 mt-0.5" />
+          <p className="ds-caption text-red-700">{error}</p>
+        </div>
+      ) : emprestimo ? (
+        <div className="space-y-4">
+          {/* Leitor */}
+          <div className="p-4 bg-slate-50 rounded-lg border border-border/60">
+            <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium mb-2">Leitor</p>
+            <p className="text-sm font-medium text-slate-700">{emprestimo.nomeCompleto}</p>
+            <p className="ds-caption text-slate-400 font-mono">{emprestimo.numeroCadastro}</p>
+          </div>
+
+          {/* Datas */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Emprestado em</p>
+              <p className="text-sm text-slate-700 mt-0.5">{fmtDate(emprestimo.dataEmprestimo)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Prazo</p>
+              <p className={cn('text-sm mt-0.5', isOverdue ? 'text-red-600 font-semibold' : 'text-slate-700')}>
+                {fmtDate(emprestimo.dataPrevistaDevolucao)}
+              </p>
+            </div>
+          </div>
+
+          {isOverdue && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg border border-red-100">
+              <AlertTriangle className="size-4 text-red-500 shrink-0" />
+              <p className="ds-caption text-red-700 font-medium">Empréstimo em atraso</p>
+            </div>
+          )}
+        </div>
+      ) : null}
     </Modal>
   )
 }
@@ -627,6 +899,7 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(false)
   const [loanTarget,    setLoanTarget]    = useState<ExemplarDTO | null>(null)
+  const [returnTarget,  setReturnTarget]  = useState<ExemplarDTO | null>(null)
   const [editTarget,    setEditTarget]    = useState<ExemplarDTO | null>(null)
   const [addOpen,       setAddOpen]       = useState(false)
   const [statusFilter,  setStatusFilter]  = useState<string>('TODOS')
@@ -700,7 +973,7 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
         body: JSON.stringify({ status: newStatus }),
       })
       await loadData()
-    } catch { /* UI shows no change - user can retry */ }
+    } catch { /* UI shows no change — user can retry */ }
   }
 
   // ── Loading state ──────────────────────────────────────────────────────────
@@ -808,7 +1081,8 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
 
         {/* Ficha bibliográfica */}
         <div className="flex gap-5 p-5 bg-slate-50 rounded-xl border border-border/60">
-          <CoverPlaceholder titulo={obra.titulo} obraId={obra.obraId} size="lg" />
+          {/* capaUrl=null — BookCover exibe placeholder; troca automática quando DTO expor o campo */}
+          <BookCover capaUrl={null} titulo={obra.titulo} obraId={obra.obraId} size="lg" />
           <div className="min-w-0 flex-1">
             {obra.subtitulo && (
               <p className="text-sm text-slate-500 italic mb-3">{obra.subtitulo}</p>
@@ -820,8 +1094,8 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
               <MetaField label="CDD"     value={obra.classificacao} />
               <MetaField label="Edição"  value={obra.edicao} />
               <MetaField label="Idioma"  value={null} missing />
-              {obra.colecao      && <MetaField label="Coleção" value={obra.colecao} />}
-              {obra.tipoPublicacao && <MetaField label="Tipo" value={obra.tipoPublicacao} />}
+              {obra.colecao       && <MetaField label="Coleção" value={obra.colecao} />}
+              {obra.tipoPublicacao && <MetaField label="Tipo"   value={obra.tipoPublicacao} />}
             </div>
             {assuntos.length > 0 && (
               <div className="mt-3 pt-3 border-t border-border/50">
@@ -938,6 +1212,7 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
                 onLoan={setLoanTarget}
                 onEdit={setEditTarget}
                 onStatusChange={handleStatusChange}
+                onReturn={setReturnTarget}
               />
             ))}
           </div>
@@ -1075,6 +1350,13 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
         onClose={() => setLoanTarget(null)}
         exemplar={loanTarget}
         onSuccess={loadData}
+      />
+
+      <DevolucaoModal
+        open={!!returnTarget}
+        onClose={() => setReturnTarget(null)}
+        exemplar={returnTarget}
+        onSuccess={() => { loadData(); setReturnTarget(null) }}
       />
 
       <EditExemplarDrawer
