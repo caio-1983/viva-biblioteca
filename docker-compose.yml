@@ -1,16 +1,35 @@
 services:
   biblioteca:
-    build: .
-    container_name: biblioteca
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    image: viva-biblioteca:latest
+    container_name: viva-biblioteca
 
     restart: unless-stopped
 
     ports:
       - "3002:3000"
 
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "file:/app/storage/database/biblioteca.db"
+      NEXT_TELEMETRY_DISABLED: "1"
+
     volumes:
       - ./storage:/app/storage
 
-    environment:
-      DATABASE_URL: file:./storage/database/biblioteca.db
-      NODE_ENV: production
+    networks:
+      - biblioteca_net
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  biblioteca_net:
+    driver: bridge

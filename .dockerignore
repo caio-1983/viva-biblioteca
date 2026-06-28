@@ -1,3 +1,56 @@
+# ── Dependências (reconstruídas no Docker) ──────────────────
 node_modules
+
+# ── Saída de build (reconstruída no Docker) ─────────────────
 .next
+out
+
+# ── Git ─────────────────────────────────────────────────────
 .git
+.gitignore
+.gitattributes
+
+# ── Variáveis de ambiente (injetadas em runtime via compose) ─
+.env
+.env.*
+!.env.example
+
+# ── Dados persistentes (montados como volume) ───────────────
+storage/
+
+# ── Ferramentas de desenvolvimento ──────────────────────────
+scripts/
+.eslintrc*
+.eslintignore
+.prettier*
+
+# ── IDE e SO ────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# ── Logs ────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+logs/
+
+# ── Testes ──────────────────────────────────────────────────
+coverage/
+__tests__/
+*.test.ts
+*.spec.ts
+
+# ── Claude Code ─────────────────────────────────────────────
+.claude/
+CLAUDE.md
+AGENTS.md
+
+# ── Documentação (não necessária na imagem) ─────────────────
+docs/
+
+# ── Docker (não precisa de si mesmo) ────────────────────────
+Dockerfile*
+docker-compose*.yml
+.dockerignore
