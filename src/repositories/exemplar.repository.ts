@@ -73,15 +73,15 @@ export class ExemplarRepository {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = { ativo: filters?.ativo !== false }
 
-    if (filters?.titulo) where.obra = { ...where.obra, titulo: { contains: filters.titulo } }
-    if (filters?.autor)  where.obra = { ...where.obra, autor:  { contains: filters.autor  } }
+    if (filters?.titulo) where.obra = { ...where.obra, titulo: { contains: filters.titulo, mode: 'insensitive' } }
+    if (filters?.autor)  where.obra = { ...where.obra, autor:  { contains: filters.autor,  mode: 'insensitive' } }
     if (filters?.assunto) {
       where.obra = {
         ...where.obra,
         OR: [
-          { assunto1: { contains: filters.assunto } },
-          { assunto2: { contains: filters.assunto } },
-          { assunto3: { contains: filters.assunto } },
+          { assunto1: { contains: filters.assunto, mode: 'insensitive' } },
+          { assunto2: { contains: filters.assunto, mode: 'insensitive' } },
+          { assunto3: { contains: filters.assunto, mode: 'insensitive' } },
         ],
       }
     }

@@ -1,0 +1,235 @@
+{
+  "geradoEm": "2026-06-28T18:51:08.981Z",
+  "duracao": "0.22s",
+  "status": "APROVADO",
+  "totalChecks": 32,
+  "aprovados": 32,
+  "reprovados": 0,
+  "avisos": 0,
+  "checks": [
+    {
+      "categoria": "CONTAGEM",
+      "item": "Sequencia",
+      "sqlite": 1,
+      "postgres": 1,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "CONTAGEM",
+      "item": "Configuracao",
+      "sqlite": 1,
+      "postgres": 1,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "CONTAGEM",
+      "item": "Acervo",
+      "sqlite": 67,
+      "postgres": 67,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "CONTAGEM",
+      "item": "Usuario",
+      "sqlite": 4,
+      "postgres": 4,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "CONTAGEM",
+      "item": "Obra",
+      "sqlite": 67,
+      "postgres": 67,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "CONTAGEM",
+      "item": "Exemplar",
+      "sqlite": 68,
+      "postgres": 68,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "CONTAGEM",
+      "item": "MigracaoAuditoria",
+      "sqlite": 67,
+      "postgres": 67,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "CONTAGEM",
+      "item": "Emprestimo",
+      "sqlite": 7,
+      "postgres": 7,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "REFERENCIAL",
+      "item": "Emprestimo.usuarioId → Usuario",
+      "sqlite": 0,
+      "postgres": 0,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "REFERENCIAL",
+      "item": "Emprestimo.exemplarId → Exemplar",
+      "sqlite": 0,
+      "postgres": 0,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "REFERENCIAL",
+      "item": "Exemplar.obraId → Obra",
+      "sqlite": 0,
+      "postgres": 0,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "CONSTRAINT",
+      "item": "Usuario.numeroCadastro UNIQUE",
+      "sqlite": 0,
+      "postgres": 0,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "CONSTRAINT",
+      "item": "Exemplar.codigoExemplar UNIQUE",
+      "sqlite": 0,
+      "postgres": 0,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "CONSTRAINT",
+      "item": "Acervo.numeroExemplar UNIQUE",
+      "sqlite": 0,
+      "postgres": 0,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "ENUM",
+      "item": "Exemplar.status valores válidos",
+      "sqlite": 0,
+      "postgres": 0,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "ENUM",
+      "item": "Acervo.status valores válidos",
+      "sqlite": 0,
+      "postgres": 0,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "ENUM",
+      "item": "Emprestimo.status valores válidos",
+      "sqlite": 0,
+      "postgres": 0,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "DATA",
+      "item": "Emprestimo.dataEmprestimo NOT NULL",
+      "sqlite": 0,
+      "postgres": 0,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "DATA",
+      "item": "Emprestimo.dataPrevistaDevolucao NOT NULL",
+      "sqlite": 0,
+      "postgres": 0,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "DATA",
+      "item": "Usuario.dataNascimento sem datas futuras",
+      "sqlite": 0,
+      "postgres": 0,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "CODIGO",
+      "item": "Exemplar.codigoExemplar — integridade migração",
+      "sqlite": 68,
+      "postgres": 68,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "CODIGO",
+      "item": "Usuario.numeroCadastro formato US000000",
+      "sqlite": 0,
+      "postgres": 0,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "SEQUENCE",
+      "item": "Sequencia exemplar ≥ total de Exemplares",
+      "sqlite": 68,
+      "postgres": 68,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "CONFIG",
+      "item": "prazoEmprestimoDias",
+      "sqlite": 20,
+      "postgres": 20,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "CONFIG",
+      "item": "maxEmprestimos",
+      "sqlite": 3,
+      "postgres": 3,
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "SEQUENCE",
+      "item": "Acervo.id sequence",
+      "sqlite": 67,
+      "postgres": "next=68",
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "SEQUENCE",
+      "item": "Configuracao.id sequence",
+      "sqlite": 1,
+      "postgres": "next=2",
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "SEQUENCE",
+      "item": "Usuario.id sequence",
+      "sqlite": 4,
+      "postgres": "next=5",
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "SEQUENCE",
+      "item": "Obra.id sequence",
+      "sqlite": 67,
+      "postgres": "next=68",
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "SEQUENCE",
+      "item": "Exemplar.id sequence",
+      "sqlite": 68,
+      "postgres": "next=69",
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "SEQUENCE",
+      "item": "MigracaoAuditoria.id sequence",
+      "sqlite": 67,
+      "postgres": "next=68",
+      "status": "APROVADO"
+    },
+    {
+      "categoria": "SEQUENCE",
+      "item": "Emprestimo.id sequence",
+      "sqlite": 7,
+      "postgres": "next=8",
+      "status": "APROVADO"
+    }
+  ]
+}

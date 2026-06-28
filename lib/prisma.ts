@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
+import { PrismaPg } from '@prisma/adapter-pg'
 
 let prismaInstance: PrismaClient | null = null
 
@@ -10,8 +10,8 @@ export function getPrisma(): PrismaClient {
     throw new Error('Cannot use Prisma in browser')
   }
 
-  const url = process.env.DATABASE_URL ?? 'file:./storage/database/biblioteca.db'
-  const adapter = new PrismaBetterSqlite3({ url })
+  const url = process.env.DATABASE_URL ?? 'postgresql://biblioteca:biblioteca@localhost:5432/biblioteca'
+  const adapter = new PrismaPg(url)
 
   prismaInstance = new PrismaClient({ adapter })
   return prismaInstance

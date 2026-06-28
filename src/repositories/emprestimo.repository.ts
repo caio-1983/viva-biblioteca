@@ -106,12 +106,12 @@ export class EmprestimoRepository {
         totalEmprestimos: number | bigint
       }>
     >`
-      SELECT o.titulo, o.autor, ex.codigoExemplar, COUNT(*) AS totalEmprestimos
-      FROM Emprestimo e
-      JOIN Exemplar ex ON ex.id = e.exemplarId
-      JOIN Obra o ON o.id = ex.obraId
-      GROUP BY e.exemplarId
-      ORDER BY totalEmprestimos DESC
+      SELECT o.titulo, o.autor, ex."codigoExemplar", COUNT(*) AS "totalEmprestimos"
+      FROM "Emprestimo" e
+      JOIN "Exemplar" ex ON ex.id = e."exemplarId"
+      JOIN "Obra" o ON o.id = ex."obraId"
+      GROUP BY ex."codigoExemplar", o.titulo, o.autor
+      ORDER BY COUNT(*) DESC
       LIMIT ${limit}
     `
     return rows.map((r) => ({
@@ -131,15 +131,15 @@ export class EmprestimoRepository {
   async findPorDia(days = 90) {
     const since = new Date()
     since.setDate(since.getDate() - days)
-    const sinceStr = since.toISOString().split('T')[0]
+    since.setHours(0, 0, 0, 0)
 
     const rows = await prisma.$queryRaw<
       Array<{ data: string; total: number | bigint }>
     >`
-      SELECT date(dataEmprestimo) AS data, COUNT(*) AS total
-      FROM Emprestimo
-      WHERE date(dataEmprestimo) >= ${sinceStr}
-      GROUP BY date(dataEmprestimo)
+      SELECT TO_CHAR("dataEmprestimo", 'YYYY-MM-DD') AS data, COUNT(*) AS total
+      FROM "Emprestimo"
+      WHERE "dataEmprestimo" >= ${since}
+      GROUP BY TO_CHAR("dataEmprestimo", 'YYYY-MM-DD')
       ORDER BY data ASC
     `
     return rows.map((r) => ({ data: r.data, total: Number(r.total) }))
