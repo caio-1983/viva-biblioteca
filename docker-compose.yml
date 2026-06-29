@@ -29,7 +29,11 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      PORT: "3000"
+      APP_URL: "http://localhost:3002"
       DATABASE_URL: "postgresql://biblioteca:biblioteca@postgres:5432/biblioteca"
+      STORAGE_PATH: "/app/storage"
+      NEXT_TELEMETRY_DISABLED: "1"
     command: sh -c "prisma migrate deploy && node prisma/seed-init.js"
     restart: "no"
 
