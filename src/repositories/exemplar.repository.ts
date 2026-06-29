@@ -18,6 +18,7 @@ export class ExemplarRepository {
           isbn: data.isbn ?? null,
           tipoPublicacao: data.tipoPublicacao ?? null,
           classificacao: data.classificacao ?? null,
+          cutter: data.cutter ?? null,
           titulo: data.titulo,
           subtitulo: data.subtitulo ?? null,
           autor: data.autor ?? null,

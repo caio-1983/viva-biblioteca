@@ -7,7 +7,7 @@ import { usePageTitle } from '@/components/page-context'
 import {
   ArrowLeft, Plus, Pencil, BookOpen, BookMarked, Archive,
   CheckCircle, Clock, Wrench, Search, AlertTriangle,
-  ExternalLink, RefreshCw, Undo2,
+  ExternalLink, RefreshCw, Undo2, Printer, Tag,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -24,6 +24,7 @@ import { EmptyState }        from '@/components/ui/empty-state'
 import { SkeletonCard, Spinner } from '@/components/ui/loading-state'
 import { ConfirmDialog }     from '@/components/ui/confirm-dialog'
 import { useToast }          from '@/components/ui/toast'
+import { LabelPrintDialog }  from '@/components/cataloging/label-print-dialog'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,6 +43,8 @@ type ExemplarDTO = {
   isbn: string | null
   tipoPublicacao: string | null
   classificacao: string | null
+  cutter: string | null
+  notacaoAutor: string | null
   titulo: string
   subtitulo: string | null
   autor: string | null
@@ -820,18 +823,22 @@ function AddExemplarDrawer({ open, onClose, obra, onSaved }: {
   obra: ExemplarDTO | null
   onSaved: () => void
 }) {
-  const [tombo,        setTombo]        = useState('')
-  const [codigoBarras, setCodigoBarras] = useState('')
-  const [localizacao,  setLocalizacao]  = useState('')
-  const [estadoFisico, setEstadoFisico] = useState('')
-  const [observacao,   setObservacao]   = useState('')
-  const [saving,       setSaving]       = useState(false)
-  const [error,        setError]        = useState<string | null>(null)
+  const [tombo,            setTombo]            = useState('')
+  const [codigoBarras,     setCodigoBarras]     = useState('')
+  const [localizacao,      setLocalizacao]      = useState('')
+  const [estadoFisico,     setEstadoFisico]     = useState('')
+  const [observacao,       setObservacao]       = useState('')
+  const [saving,           setSaving]           = useState(false)
+  const [error,            setError]            = useState<string | null>(null)
+  const [saved,            setSaved]            = useState(false)
+  const [printNow,         setPrintNow]         = useState(false)
+  const [showPrintDialog,  setShowPrintDialog]  = useState(false)
 
   useEffect(() => {
     if (open) {
       setTombo(''); setCodigoBarras(''); setLocalizacao('')
       setEstadoFisico(''); setObservacao(''); setError(null)
+      setSaved(false); setPrintNow(false); setShowPrintDialog(false)
     }
   }, [open])
 
@@ -855,7 +862,7 @@ function AddExemplarDrawer({ open, onClose, obra, onSaved }: {
         throw new Error(d.error ?? 'Erro ao adicionar exemplar')
       }
       onSaved()
-      onClose()
+      setSaved(true)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erro ao adicionar exemplar')
     } finally {
@@ -863,7 +870,16 @@ function AddExemplarDrawer({ open, onClose, obra, onSaved }: {
     }
   }
 
+  function handleConcluir() {
+    if (printNow) {
+      setShowPrintDialog(true)
+    } else {
+      onClose()
+    }
+  }
+
   return (
+    <>
     <Drawer
       open={open}
       onClose={onClose}
@@ -871,17 +887,51 @@ function AddExemplarDrawer({ open, onClose, obra, onSaved }: {
       description={obra?.titulo ?? ''}
       width="sm"
       footer={
-        <>
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={saving} className="gap-1.5">
-            {saving && <Spinner size="sm" />}
-            <Plus className="size-3.5" />
-            Salvar Exemplar
+        saved ? (
+          <Button onClick={handleConcluir} className="gap-1.5 w-full">
+            {printNow
+              ? <><Printer className="size-3.5" /> Continuar para impressão</>
+              : 'Concluir'
+            }
           </Button>
-        </>
+        ) : (
+          <>
+            <Button variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={saving} className="gap-1.5">
+              {saving && <Spinner size="sm" />}
+              <Plus className="size-3.5" />
+              Salvar Exemplar
+            </Button>
+          </>
+        )
       }
     >
       <div className="space-y-5">
+        {/* ── Estado de sucesso ── */}
+        {saved ? (
+          <div className="space-y-4">
+            <div className="flex flex-col items-center text-center space-y-2 py-4">
+              <div className="size-10 rounded-full bg-emerald-50 flex items-center justify-center">
+                <CheckCircle className="size-5 text-emerald-500" />
+              </div>
+              <p className="text-sm font-semibold text-slate-800">Exemplar adicionado com sucesso.</p>
+            </div>
+
+            <label className="flex items-start gap-3 p-3 border border-border/60 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors select-none">
+              <input
+                type="checkbox"
+                checked={printNow}
+                onChange={e => setPrintNow(e.target.checked)}
+                className="mt-0.5 accent-brand-500"
+              />
+              <div className="flex items-center gap-2">
+                <Tag className="size-4 text-slate-400 shrink-0" />
+                <span className="text-sm text-slate-700">Imprimir etiqueta agora</span>
+              </div>
+            </label>
+          </div>
+        ) : (
+          <>
         {obra && (
           <div className="p-3 bg-brand-50 rounded-lg border border-brand-100">
             <p className="text-[10px] uppercase tracking-widest text-brand-400 font-medium mb-1">Obra</p>
@@ -958,8 +1008,27 @@ function AddExemplarDrawer({ open, onClose, obra, onSaved }: {
             <AlertTriangle className="size-3.5" />{error}
           </p>
         )}
+        </>
+        )}
       </div>
     </Drawer>
+
+    {/* Dialog de impressão — abre após o sucesso do save */}
+    {obra && (
+      <LabelPrintDialog
+        open={showPrintDialog}
+        onClose={() => { setShowPrintDialog(false); onClose() }}
+        obra={{
+          titulo:        obra.titulo,
+          classificacao: obra.classificacao,
+          cutter:        obra.cutter,
+          anoPublicacao: obra.anoPublicacao,
+          edicao:        obra.edicao,
+        }}
+        quantity={1}
+      />
+    )}
+  </>
   )
 }
 
@@ -979,6 +1048,7 @@ function EditObraDrawer({ open, obra, onClose, onSaved }: {
   const [anoPublicacao,  setAnoPublicacao]  = useState('')
   const [edicao,         setEdicao]         = useState('')
   const [classificacao,  setClassificacao]  = useState('')
+  const [cutter,         setCutter]         = useState('')
   const [assunto1,       setAssunto1]       = useState('')
   const [assunto2,       setAssunto2]       = useState('')
   const [assunto3,       setAssunto3]       = useState('')
@@ -997,6 +1067,7 @@ function EditObraDrawer({ open, obra, onClose, onSaved }: {
       setAnoPublicacao(obra.anoPublicacao?.toString() ?? '')
       setEdicao(obra.edicao ?? '')
       setClassificacao(obra.classificacao ?? '')
+      setCutter(obra.cutter ?? '')
       setAssunto1(obra.assunto1 ?? '')
       setAssunto2(obra.assunto2 ?? '')
       setAssunto3(obra.assunto3 ?? '')
@@ -1022,6 +1093,7 @@ function EditObraDrawer({ open, obra, onClose, onSaved }: {
           anoPublicacao: anoPublicacao ? parseInt(anoPublicacao, 10) : null,
           edicao: edicao.trim() || null,
           classificacao: classificacao.trim() || null,
+          cutter: cutter.trim() || null,
           assunto1: assunto1.trim() || null,
           assunto2: assunto2.trim() || null,
           assunto3: assunto3.trim() || null,
@@ -1091,6 +1163,10 @@ function EditObraDrawer({ open, obra, onClose, onSaved }: {
           <div className="space-y-2">
             <label className="ds-label text-slate-600" htmlFor="eo-cdd">CDD / Classificação</label>
             <Input id="eo-cdd" value={classificacao} onChange={e => setClassificacao(e.target.value)} placeholder="ex: 869.3" />
+          </div>
+          <div className="space-y-2">
+            <label className="ds-label text-slate-600" htmlFor="eo-cutter">Cutter-Sanborn</label>
+            <Input id="eo-cutter" value={cutter} onChange={e => setCutter(e.target.value)} placeholder="ex: B576a" />
           </div>
           <div className="space-y-2">
             <label className="ds-label text-slate-600" htmlFor="eo-tipo">Tipo de publicação</label>

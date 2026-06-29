@@ -7,7 +7,7 @@ import Link from 'next/link'
 import {
   Search, BookOpen, Plus, ArrowLeft, ArrowRight, CheckCircle2,
   AlertTriangle, Upload, Barcode, Wand2, Loader2, ChevronRight,
-  FileSpreadsheet, Database, BookMarked, ExternalLink,
+  FileSpreadsheet, Database, BookMarked, ExternalLink, Printer, Tag,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -21,6 +21,7 @@ import { StatusBadge }        from '@/components/ui/status-badge'
 import { Drawer }             from '@/components/ui/drawer'
 import { EmptyState }         from '@/components/ui/empty-state'
 import { Section }            from '@/components/ui/section'
+import { LabelPrintDialog }  from '@/components/cataloging/label-print-dialog'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,6 +81,7 @@ interface FormData {
   tipoPublicacao: string
   // Step 2 — Catalogação
   classificacao: string
+  cutter: string
   assunto1: string
   assunto2: string
   assunto3: string
@@ -96,7 +98,7 @@ interface FormData {
 
 const FORM_EMPTY: FormData = {
   titulo: '', subtitulo: '', isbn: '', tipoPublicacao: '',
-  classificacao: '', assunto1: '', assunto2: '', assunto3: '', colecao: '',
+  classificacao: '', cutter: '', assunto1: '', assunto2: '', assunto3: '', colecao: '',
   autor: '', editora: '', edicao: '', anoPublicacao: '',
   tombo: '', observacao: '',
 }
@@ -440,7 +442,10 @@ export function CatalogingWorkspace() {
   const [form,     setForm]     = useState<FormData>(FORM_EMPTY)
   const [saving,   setSaving]   = useState(false)
   const [saveErr,  setSaveErr]  = useState<string | null>(null)
-  const [addTarget, setAddTarget] = useState<ObraCard | null>(null)
+  const [addTarget,       setAddTarget]       = useState<ObraCard | null>(null)
+  const [savedObraId,     setSavedObraId]     = useState<number | null>(null)
+  const [printNow,        setPrintNow]        = useState(false)
+  const [showPrintDialog, setShowPrintDialog] = useState(false)
 
   // Detect query type
   const detectedISBN = useMemo(() => isISBN(query), [query])
@@ -503,20 +508,21 @@ export function CatalogingWorkspace() {
     try {
       const payload = {
         titulo:         form.titulo.trim(),
-        subtitulo:      form.subtitulo.trim()   || null,
-        isbn:           form.isbn.trim()        || null,
+        subtitulo:      form.subtitulo.trim()      || null,
+        isbn:           form.isbn.trim()           || null,
         tipoPublicacao: form.tipoPublicacao.trim() || null,
-        classificacao:  form.classificacao.trim() || null,
-        assunto1:       form.assunto1.trim()    || null,
-        assunto2:       form.assunto2.trim()    || null,
-        assunto3:       form.assunto3.trim()    || null,
-        colecao:        form.colecao.trim()     || null,
-        autor:          form.autor.trim()       || null,
-        editora:        form.editora.trim()     || null,
-        edicao:         form.edicao.trim()      || null,
+        classificacao:  form.classificacao.trim()  || null,
+        cutter:         form.cutter.trim()         || null,
+        assunto1:       form.assunto1.trim()       || null,
+        assunto2:       form.assunto2.trim()       || null,
+        assunto3:       form.assunto3.trim()       || null,
+        colecao:        form.colecao.trim()        || null,
+        autor:          form.autor.trim()          || null,
+        editora:        form.editora.trim()        || null,
+        edicao:         form.edicao.trim()         || null,
         anoPublicacao:  form.anoPublicacao ? Number(form.anoPublicacao) : null,
-        tombo:          form.tombo.trim()       || null,
-        observacao:     form.observacao.trim()  || null,
+        tombo:          form.tombo.trim()          || null,
+        observacao:     form.observacao.trim()     || null,
       }
 
       const res = await fetch('/api/acervo', {
@@ -532,11 +538,21 @@ export function CatalogingWorkspace() {
 
       const created = await res.json()
       const obraId: number = created.obraId ?? created.obra?.id ?? created.id
-      router.push(`/acervo/obra/${obraId}`)
+      setSavedObraId(obraId)
+      setPrintNow(false)
+      setPhase('success')
     } catch (e) {
       setSaveErr(e instanceof Error ? e.message : 'Erro ao salvar')
     } finally {
       setSaving(false)
+    }
+  }
+
+  function handleConcluir() {
+    if (printNow) {
+      setShowPrintDialog(true)
+    } else {
+      router.push(`/acervo/obra/${savedObraId}`)
     }
   }
 
@@ -671,6 +687,46 @@ export function CatalogingWorkspace() {
             </div>
           )}
 
+          {/* ─ success ─ */}
+          {phase === 'success' && (
+            <Card className="border border-border/60 bg-white shadow-none">
+              <CardContent className="p-6 space-y-6">
+                {/* Confirmação */}
+                <div className="flex flex-col items-center text-center space-y-2">
+                  <div className="size-12 rounded-full bg-emerald-50 flex items-center justify-center">
+                    <CheckCircle2 className="size-6 text-emerald-500" />
+                  </div>
+                  <h3 className="text-base font-semibold text-slate-800">Cadastro realizado com sucesso.</h3>
+                  <p className="text-sm text-slate-500">Foi cadastrado 1 exemplar.</p>
+                </div>
+
+                {/* Opção de impressão */}
+                <label className="flex items-start gap-3 p-3 border border-border/60 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors select-none">
+                  <input
+                    type="checkbox"
+                    checked={printNow}
+                    onChange={e => setPrintNow(e.target.checked)}
+                    className="mt-0.5 accent-brand-500"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Tag className="size-4 text-slate-400 shrink-0" />
+                    <span className="text-sm text-slate-700">Imprimir etiquetas agora</span>
+                  </div>
+                </label>
+
+                {/* Ação */}
+                <div className="flex justify-end pt-1 border-t border-border/40">
+                  <Button onClick={handleConcluir} className="gap-1.5">
+                    {printNow
+                      ? <><Printer className="size-3.5" /> Continuar para impressão</>
+                      : <><ExternalLink className="size-3.5" /> Concluir</>
+                    }
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* ─ new-obra ─ */}
           {phase === 'new-obra' && (
             <Card className="border border-border/60 bg-white shadow-none">
@@ -759,6 +815,14 @@ export function CatalogingWorkspace() {
                           onChange={e => set('classificacao', e.target.value)}
                           placeholder="ex: 230"
                           autoFocus
+                        />
+                      </Field>
+                      <Field id="cutter" label="Notação de autor">
+                        <Input
+                          id="cutter"
+                          value={form.cutter}
+                          onChange={e => set('cutter', e.target.value)}
+                          placeholder="ex: B576a"
                         />
                       </Field>
                       <Field id="colecao" label="Coleção">
@@ -931,7 +995,7 @@ export function CatalogingWorkspace() {
                     <Button onClick={handleSave} disabled={saving} className="gap-1.5">
                       {saving
                         ? <><Loader2 className="size-3.5 animate-spin" /> Salvando…</>
-                        : <><CheckCircle2 className="size-3.5" /> Salvar e abrir Obra</>
+                        : <><CheckCircle2 className="size-3.5" /> Salvar Obra</>
                       }
                     </Button>
                   )}
@@ -955,6 +1019,22 @@ export function CatalogingWorkspace() {
         onClose={() => setAddTarget(null)}
         obra={addTarget}
       />
+
+      {/* Dialog: imprimir etiquetas após cadastro */}
+      {savedObraId !== null && (
+        <LabelPrintDialog
+          open={showPrintDialog}
+          onClose={() => router.push(`/acervo/obra/${savedObraId}`)}
+          obra={{
+            titulo:        form.titulo,
+            classificacao: form.classificacao || null,
+            cutter:        form.cutter        || null,
+            anoPublicacao: form.anoPublicacao ? Number(form.anoPublicacao) : null,
+            edicao:        form.edicao        || null,
+          }}
+          quantity={1}
+        />
+      )}
     </div>
   )
 }

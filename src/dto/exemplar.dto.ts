@@ -33,6 +33,7 @@ export interface ExemplarDetailDTO {
   isbn: string | null
   tipoPublicacao: string | null
   classificacao: string | null
+  cutter: string | null
   titulo: string
   subtitulo: string | null
   autor: string | null
@@ -73,6 +74,7 @@ export function toExemplarDetailDTO(e: ExemplarComObra): ExemplarDetailDTO {
     isbn: e.obra.isbn ?? null,
     tipoPublicacao: e.obra.tipoPublicacao ?? null,
     classificacao: e.obra.classificacao ?? null,
+    cutter: e.obra.cutter ?? null,
     titulo: e.obra.titulo,
     subtitulo: e.obra.subtitulo ?? null,
     autor: e.obra.autor ?? null,

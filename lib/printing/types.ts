@@ -47,6 +47,14 @@ export interface LabelModel {
   }
 }
 
+/** Pure domain data for a spine label (etiqueta de lombada). */
+export interface LabelData {
+  cdd: string
+  cutter: string
+  ano: number | string
+  edicao: string
+}
+
 /** Content for a single label slot. */
 export interface LabelSlot {
   /** 0-based position index on the sheet */
