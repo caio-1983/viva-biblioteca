@@ -1,0 +1,2 @@
+ALTER TABLE "Obra"
+ADD COLUMN "cutter" TEXT;
