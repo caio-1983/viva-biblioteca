@@ -22,12 +22,6 @@ export function DashboardModern() {
   return (
     <div className="space-y-8 pb-8">
 
-      {/* Cabeçalho da página */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Resumo operacional da biblioteca.</p>
-      </div>
-
       {/* Ações Rápidas */}
       <section>
         <QuickActions />

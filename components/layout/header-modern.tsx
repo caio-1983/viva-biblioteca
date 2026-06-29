@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Menu, Bell, User, Search } from 'lucide-react'
+import { Menu, Bell, User, Search, LogOut } from 'lucide-react'
+import { useSession, signOut } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { usePageTitle } from '@/components/page-context'
 
@@ -11,6 +12,7 @@ interface HeaderModernProps {
 
 export function HeaderModern({ onMenuClick }: HeaderModernProps) {
   const { title, subtitle } = usePageTitle()
+  const { data: session } = useSession()
   const [dateTime, setDateTime] = useState({ date: '', time: '' })
 
   useEffect(() => {
@@ -30,14 +32,16 @@ export function HeaderModern({ onMenuClick }: HeaderModernProps) {
     }
 
     updateDateTime()
-    const interval = setInterval(updateDateTime, 60000) // Update every minute
+    const interval = setInterval(updateDateTime, 60000)
     return () => clearInterval(interval)
   }, [])
+
+  const handleLogout = () => signOut({ callbackUrl: '/login' })
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white shadow-sm">
       <div className="flex h-20 items-center justify-between px-4 md:px-8">
-        {/* Left side - Menu button (mobile only) */}
+        {/* Botão de menu (mobile) */}
         <div className="flex items-center gap-2 md:hidden">
           <Button
             variant="ghost"
@@ -49,16 +53,11 @@ export function HeaderModern({ onMenuClick }: HeaderModernProps) {
           </Button>
         </div>
 
-        {/* Center/Right side */}
         <div className="flex flex-1 items-center justify-between">
-          {/* Left section - Page Title and Date/Time */}
+          {/* Título da página e data/hora */}
           <div className="flex-1">
-            <h1>
-              {title}
-            </h1>
-            {subtitle && (
-              <p className="subtitle">{subtitle}</p>
-            )}
+            <h1>{title}</h1>
+            {subtitle && <p className="subtitle">{subtitle}</p>}
             {!subtitle && (
               <div className="hidden md:block mt-0.5">
                 <p className="text-xs text-slate-500">
@@ -68,9 +67,9 @@ export function HeaderModern({ onMenuClick }: HeaderModernProps) {
             )}
           </div>
 
-          {/* Right section - Actions and user */}
+          {/* Ações e usuário */}
           <div className="flex items-center gap-4">
-            {/* Global search trigger */}
+            {/* Pesquisa global */}
             <button
               onClick={() => window.dispatchEvent(new CustomEvent('viva:search:open'))}
               className="hidden md:flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
@@ -99,14 +98,29 @@ export function HeaderModern({ onMenuClick }: HeaderModernProps) {
               <Bell className="h-5 w-5" />
             </Button>
 
+            {/* Usuário + Logout */}
             <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
               <div className="hidden md:block text-right">
-                <p className="text-sm font-medium text-slate-900">Administrator</p>
-                <p className="text-xs text-slate-500">admin@biblioteca.com</p>
+                <p className="text-sm font-medium text-slate-900">
+                  {session?.user?.nome ?? '—'}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {session?.user?.email ?? ''}
+                </p>
               </div>
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-linear-to-br from-purple-500 to-purple-600">
                 <User className="h-5 w-5 text-white" />
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="h-10 w-10 text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                aria-label="Sair do sistema"
+                title="Sair"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
