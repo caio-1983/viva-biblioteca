@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+import { PageHeader }        from '@/components/ui/page-header'
 import { KpiCard }           from '@/components/ui/kpi-card'
 import { Button }            from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -1267,6 +1268,12 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
   if (loading) {
     return (
       <div className="space-y-6 pb-12">
+        <PageHeader
+          title="Carregando..."
+          breadcrumb={
+            <ObraBreadcrumb />
+          }
+        />
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
@@ -1277,6 +1284,10 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
   if (error || exemplares.length === 0) {
     return (
       <div className="space-y-6 pb-12">
+        <PageHeader
+          title="Obra não encontrada"
+          breadcrumb={<ObraBreadcrumb />}
+        />
         <EmptyState
           icon={<BookOpen className="size-8 text-slate-200" />}
           title="Obra não encontrada"
@@ -1300,36 +1311,43 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
 
       {/* ══ 1. CABEÇALHO ════════════════════════════════════════════════════ */}
       <div className="space-y-5">
-        <div className="flex items-center justify-end gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => loadData()}>
-            <RefreshCw className="size-3.5" />
-            <span className="hidden sm:inline">Atualizar</span>
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEditObraOpen(true)}>
-            <Pencil className="size-3.5" />
-            <span className="hidden sm:inline">Editar Obra</span>
-          </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
-            <Plus className="size-3.5" />
-            <span className="hidden sm:inline">Exemplar</span>
-          </Button>
-          <ActionMenu
-            align="end"
-            items={[
-              {
-                label: 'Exportar dados',
-                icon: <Archive className="size-4" />,
-                onClick: () => {},
-                disabled: true,
-              },
-              {
-                label: 'Ir para Cadastro',
-                icon: <ExternalLink className="size-4" />,
-                onClick: () => router.push('/acervo/cadastro'),
-              },
-            ]}
-          />
-        </div>
+        <PageHeader
+          title={obra.titulo}
+          description={[obra.autor, obra.editora, obra.anoPublicacao].filter(Boolean).join(' · ')}
+          breadcrumb={<ObraBreadcrumb titulo={obra.titulo} />}
+          actions={
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => loadData()}>
+                <RefreshCw className="size-3.5" />
+                <span className="hidden sm:inline">Atualizar</span>
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEditObraOpen(true)}>
+                <Pencil className="size-3.5" />
+                <span className="hidden sm:inline">Editar Obra</span>
+              </Button>
+              <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
+                <Plus className="size-3.5" />
+                <span className="hidden sm:inline">Exemplar</span>
+              </Button>
+              <ActionMenu
+                align="end"
+                items={[
+                  {
+                    label: 'Exportar dados',
+                    icon: <Archive className="size-4" />,
+                    onClick: () => {},
+                    disabled: true,
+                  },
+                  {
+                    label: 'Ir para Cadastro',
+                    icon: <ExternalLink className="size-4" />,
+                    onClick: () => router.push('/acervo/cadastro'),
+                  },
+                ]}
+              />
+            </div>
+          }
+        />
 
         {/* Ficha bibliográfica */}
         <div className="flex gap-5 p-5 bg-slate-50 rounded-xl border border-border/60">

@@ -1,8 +1,10 @@
 'use client'
 
-import { AlertTriangle, BookUp, CheckCircle2, Loader2, RefreshCw } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, BookUp, CheckCircle2, Loader2, RefreshCw } from 'lucide-react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
 import { FileDropZone } from '@/components/import/FileDropZone'
 import { ImportStats } from '@/components/import/ImportStats'
 import { ErrorTable } from '@/components/import/ErrorTable'
@@ -16,6 +18,20 @@ export function ImportWorkspace() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 space-y-6">
+      <PageHeader
+        title="Importar Acervo"
+        description="Importe obras e exemplares a partir de uma planilha Excel (.xlsx)"
+        breadcrumb={
+          <Link
+            href="/settings"
+            className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar para Administração
+          </Link>
+        }
+      />
+
       <Card className="max-w-3xl mx-auto shadow-sm">
         <CardContent className="p-8">
           {/* IDLE / FILE SELECTED */}

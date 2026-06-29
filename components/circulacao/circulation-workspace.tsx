@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+import { PageHeader }        from '@/components/ui/page-header'
 import { Button }            from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge }       from '@/components/ui/status-badge'
@@ -580,6 +581,11 @@ export function CirculationWorkspace() {
   if (dataLoading) {
     return (
       <div className="space-y-6 pb-12">
+        <PageHeader
+          title="Circulação"
+          description="Empréstimos, devoluções e renovações"
+          breadcrumb={<Breadcrumb items={[{ label: 'Dashboard', href: '/' }]} />}
+        />
         <div className="flex items-center justify-center py-24">
           <Spinner />
         </div>
@@ -590,6 +596,11 @@ export function CirculationWorkspace() {
   if (dataError) {
     return (
       <div className="space-y-6 pb-12">
+        <PageHeader
+          title="Circulação"
+          description="Empréstimos, devoluções e renovações"
+          breadcrumb={<Breadcrumb items={[{ label: 'Dashboard', href: '/' }]} />}
+        />
         <EmptyState
           icon={<AlertTriangle className="size-8 text-slate-200" />}
           title="Não foi possível carregar os dados"
@@ -1491,6 +1502,13 @@ export function CirculationWorkspace() {
 
   return (
     <div className="space-y-6 pb-16">
+      <PageHeader
+        title="Circulação"
+        description={`${activeLoans.length} empréstimo${activeLoans.length !== 1 ? 's' : ''} ativo${activeLoans.length !== 1 ? 's' : ''} · ${obras.filter(o => o.disponiveis > 0).length} obras disponíveis`}
+        breadcrumb={<Breadcrumb items={[{ label: 'Dashboard', href: '/' }]} />}
+        actions={pageActions}
+      />
+
       {/* Tab bar */}
       <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit">
         {TABS.map(tab => (

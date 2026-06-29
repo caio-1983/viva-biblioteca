@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePageTitle } from '@/components/page-context'
+import Link from 'next/link'
 import {
   Search, BookOpen, Plus, ArrowLeft, ArrowRight, CheckCircle2,
   AlertTriangle, Upload, Barcode, Wand2, Loader2, ChevronRight,
@@ -10,6 +11,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+import { PageHeader }         from '@/components/ui/page-header'
 import { SearchBar }          from '@/components/ui/search-bar'
 import { Button }             from '@/components/ui/button'
 import { Card, CardContent }  from '@/components/ui/card'
@@ -544,6 +546,21 @@ export function CatalogingWorkspace() {
 
   return (
     <div className="space-y-6 pb-16">
+      {/* Header */}
+      <PageHeader
+        title="Catalogação"
+        description="Identifique a obra e registre exemplares sem risco de duplicação"
+        breadcrumb={
+          <nav className="flex items-center gap-1.5 text-xs text-slate-400">
+            <Link href="/" className="hover:text-slate-600 transition-colors">Dashboard</Link>
+            <span aria-hidden>›</span>
+            <Link href="/acervo/consulta" className="hover:text-slate-600 transition-colors">Catálogo</Link>
+            <span aria-hidden>›</span>
+            <span className="text-slate-600">Nova Obra</span>
+          </nav>
+        }
+      />
+
       {/* ── Search bar — hero element ── */}
       <div className="space-y-2">
         <SearchBar

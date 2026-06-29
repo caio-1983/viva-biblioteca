@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/page-header'
 import { KpiCard } from '@/components/ui/kpi-card'
 import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -172,6 +173,11 @@ export function ReportsView() {
   if (loading) {
     return (
       <>
+        <PageHeader
+          title="Relatórios"
+          description="Indicadores, histórico e exportação de dados"
+          breadcrumb={<ReportsBreadcrumb />}
+        />
         <LoadingState label="Carregando relatórios…" />
       </>
     )
@@ -180,6 +186,11 @@ export function ReportsView() {
   if (statsError || !stats) {
     return (
       <>
+        <PageHeader
+          title="Relatórios"
+          description="Indicadores, histórico e exportação de dados"
+          breadcrumb={<ReportsBreadcrumb />}
+        />
         <EmptyState
           icon={<BarChart2 className="size-8 text-slate-400" />}
           title="Não foi possível carregar os relatórios"
@@ -197,6 +208,12 @@ export function ReportsView() {
 
   return (
     <div className="space-y-10 pb-12">
+
+      <PageHeader
+        title="Relatórios"
+        description="Indicadores, histórico e exportação de dados"
+        breadcrumb={<ReportsBreadcrumb />}
+      />
 
       {/* KPI Cards */}
       <section className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">

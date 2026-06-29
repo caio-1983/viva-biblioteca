@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+import { PageHeader }       from '@/components/ui/page-header'
 import { SearchBar }        from '@/components/ui/search-bar'
 import { Button }           from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -564,6 +565,11 @@ export function CatalogView() {
   if (loading) {
     return (
       <div className="space-y-6 pb-12">
+        <PageHeader
+          title="Catálogo"
+          description="Carregando acervo..."
+          breadcrumb={<Breadcrumb items={[{ label: 'Dashboard', href: '/' }]} />}
+        />
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
           {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
@@ -574,6 +580,10 @@ export function CatalogView() {
   if (error) {
     return (
       <div className="space-y-6 pb-12">
+        <PageHeader
+          title="Catálogo"
+          breadcrumb={<Breadcrumb items={[{ label: 'Dashboard', href: '/' }]} />}
+        />
         <EmptyState
           title="Não foi possível carregar o catálogo"
           description="Verifique a conexão com o servidor e tente novamente."
@@ -591,6 +601,27 @@ export function CatalogView() {
 
   return (
     <div className="space-y-6 pb-12">
+
+      {/* ── Cabeçalho ───────────────────────────────────────────────────── */}
+      <PageHeader
+        title="Catálogo"
+        breadcrumb={<Breadcrumb items={[{ label: 'Dashboard', href: '/' }]} />}
+        description={
+          allObras.length === 0
+            ? 'Nenhuma obra cadastrada'
+            : allObras.length === filtered.length
+              ? `${allObras.length} ${allObras.length === 1 ? 'obra' : 'obras'} no acervo`
+              : `${filtered.length} de ${allObras.length} obras`
+        }
+        actions={
+          <Link href="/acervo/cadastro">
+            <Button size="sm" className="gap-1.5">
+              <Plus className="size-3.5" />
+              Nova Obra
+            </Button>
+          </Link>
+        }
+      />
 
       {/* ── Área de pesquisa ─────────────────────────────────────────────── */}
       <div className="space-y-3">

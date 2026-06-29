@@ -1,7 +1,6 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { SessionProvider } from 'next-auth/react'
 import { LayoutModern } from './layout/layout-modern'
 import { PageProvider } from './page-context'
 import { ToastProvider } from './ui/toast'
@@ -13,12 +12,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const isAuthRoute = AUTH_ROUTES.some((r) => pathname?.startsWith(r))
 
   return (
-    <SessionProvider>
-      <ToastProvider>
-        <PageProvider>
-          {isAuthRoute ? children : <LayoutModern>{children}</LayoutModern>}
-        </PageProvider>
-      </ToastProvider>
-    </SessionProvider>
+    <ToastProvider>
+      <PageProvider>
+        {isAuthRoute ? children : <LayoutModern>{children}</LayoutModern>}
+      </PageProvider>
+    </ToastProvider>
   )
 }

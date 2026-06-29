@@ -16,6 +16,7 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { Drawer } from '@/components/ui/drawer'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Card, CardContent } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useToast } from '@/components/ui/toast'
 import { usePageTitle } from '@/components/page-context'
@@ -613,6 +614,28 @@ export function InventoryWorkspace() {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+
+        {/* Header */}
+        <PageHeader
+          title="Inventário"
+          description="Conferência e gestão do acervo físico"
+          breadcrumb={<Breadcrumb items={[{ label: 'Dashboard', href: '/' }]} />}
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => loadData()}
+              disabled={dataLoading}
+            >
+              {dataLoading
+                ? <Loader2 className="size-4 animate-spin" />
+                : <RefreshCw className="size-4" />
+              }
+              Atualizar
+            </Button>
+          }
+        />
 
         {/* KPI Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
