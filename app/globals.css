@@ -202,3 +202,37 @@
     @apply text-sm font-medium text-slate-700 leading-none;
   }
 }
+
+/* ─── LOGIN-001 — Book Opening Animation ─── */
+
+@keyframes viva-particle-float {
+  0%   { transform: translateY(0) translateX(0) scale(1); }
+  50%  { transform: translateY(-18px) translateX(6px) scale(1.15); }
+  100% { transform: translateY(-6px) translateX(-4px) scale(0.9); }
+}
+
+@keyframes viva-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Responsive: hide left page and spine on mobile */
+@media (max-width: 767px) {
+  .viva-left-page {
+    display: none !important;
+  }
+  .viva-book-spine {
+    display: none !important;
+  }
+  .viva-right-page {
+    flex: 1 !important;
+    border-radius: 8px !important;
+  }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  [style*="viva-particle-float"] {
+    animation: none !important;
+  }
+}
