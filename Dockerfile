@@ -10,7 +10,6 @@ RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
-# Impede download do binário Electron (não necessário em servidor)
 ENV ELECTRON_SKIP_BINARY_DOWNLOAD=1
 
 COPY package*.json ./
@@ -36,9 +35,21 @@ RUN npx prisma generate
 RUN npm run build
 
 # ============================================================
-# Stage 3 — runner
-# Imagem de produção. CMD inicia apenas a aplicação.
-# Migrations são executadas pelo serviço biblioteca-migrate.
+# Stage 3 — migrate
+# Derivado do builder: contém Prisma CLI (node_modules/.bin/prisma
+# com symlinks criados pelo npm), prisma.config.ts, schema, migrations,
+# pg e seed. Usado exclusivamente pelo serviço biblioteca-migrate.
+# ============================================================
+FROM builder AS migrate
+
+ENV NODE_ENV=production
+
+CMD ["sh", "-c", "npx prisma migrate deploy && node prisma/seed-init.js"]
+
+# ============================================================
+# Stage 4 — runner
+# Imagem de produção mínima. Inicia apenas com node server.js.
+# Nenhum artefato de migration é incluído aqui.
 # ============================================================
 FROM node:22-alpine AS runner
 
@@ -51,15 +62,10 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
-# Usuário não-root
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Prisma CLI instalado globalmente — cria /usr/local/bin/prisma
-# Usado exclusivamente pelo serviço biblioteca-migrate (migrate deploy + seed)
-RUN npm install -g prisma@7.8.0
-
-# Saída standalone do Next.js (inclui node_modules rastreados)
+# Saída standalone do Next.js (inclui node_modules rastreados pelo nft)
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
@@ -67,27 +73,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Cliente Prisma gerado (WASM) — não incluso no trace standalone
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 
-# Pacotes @prisma em runtime — adapter-pg e client usados pela aplicação
+# @prisma/client e @prisma/adapter-pg — garantia além do trace standalone
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
-# Driver pg — usado por prisma/seed-init.js no serviço biblioteca-migrate
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg                   ./node_modules/pg
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-connection-string ./node_modules/pg-connection-string
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-pool              ./node_modules/pg-pool
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-protocol          ./node_modules/pg-protocol
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-types             ./node_modules/pg-types
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pgpass               ./node_modules/pgpass
-
-# Schema, migrations e seed — usados pelo serviço biblioteca-migrate
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-
-# Configuração do Prisma 7 (datasource URL para migrate deploy)
-COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
-
-# dotenv — importado por prisma.config.ts; pode não estar no trace standalone
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/dotenv ./node_modules/dotenv
-
-# Diretórios de persistência (exports/imports montados como volume em produção)
 RUN mkdir -p storage/exports storage/imports && \
     chown -R nextjs:nodejs storage
 
