@@ -1,8 +1,10 @@
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import fs from 'fs';
 import path from 'path';
 
-const prisma = new PrismaClient();
+const databaseUrl = process.env.DATABASE_URL ?? 'postgresql://biblioteca:biblioteca@localhost:5432/biblioteca';
+const prisma = new PrismaClient({ adapter: new PrismaPg(databaseUrl) });
 
 interface AcervoData {
   titulo: string;
