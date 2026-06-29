@@ -22,7 +22,6 @@ services:
       context: .
       dockerfile: Dockerfile
       target: migrate
-    image: viva-biblioteca-migrate:latest
     container_name: viva-biblioteca-migrate
     depends_on:
       postgres:
