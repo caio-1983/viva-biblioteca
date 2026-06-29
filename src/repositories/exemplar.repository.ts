@@ -18,6 +18,7 @@ export class ExemplarRepository {
           isbn: data.isbn ?? null,
           tipoPublicacao: data.tipoPublicacao ?? null,
           classificacao: data.classificacao ?? null,
+          cutter: data.cutter ?? null,
           titulo: data.titulo,
           subtitulo: data.subtitulo ?? null,
           autor: data.autor ?? null,
@@ -108,7 +109,7 @@ export class ExemplarRepository {
     const exemplar = await prisma.exemplar.findUniqueOrThrow({ where: { id } })
 
     const { tombo, observacao, status, ativo, codigoBarras, localizacao, estadoFisico, ...obraFields } = data
-    const { anoPublicacao, tipoPublicacao, isbn, classificacao, titulo, subtitulo,
+    const { anoPublicacao, tipoPublicacao, isbn, classificacao, cutter, titulo, subtitulo,
             autor, edicao, editora, assunto1, assunto2, assunto3, colecao } = obraFields
 
     await prisma.$transaction(async (tx) => {
@@ -119,6 +120,7 @@ export class ExemplarRepository {
             ...(isbn !== undefined           && { isbn }),
             ...(tipoPublicacao !== undefined && { tipoPublicacao }),
             ...(classificacao !== undefined  && { classificacao }),
+            ...(cutter !== undefined         && { cutter }),
             ...(titulo !== undefined         && { titulo }),
             ...(subtitulo !== undefined      && { subtitulo }),
             ...(autor !== undefined          && { autor }),

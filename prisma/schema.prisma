@@ -125,6 +125,7 @@ model Obra {
   edicao         String?
   idioma         String?
   classificacao  String?
+  cutter         String?               // Notação do Autor (número Cutter); usado em etiquetas de lombada
   assunto1       String?               // futuro: FK → Assunto
   assunto2       String?
   assunto3       String?

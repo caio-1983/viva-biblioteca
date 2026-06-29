@@ -4,6 +4,7 @@ export const ExemplarCreateSchema = z.object({
   tipoPublicacao: z.string().optional().nullable(),
   isbn: z.string().optional().nullable(),
   classificacao: z.string().optional().nullable(),
+  cutter: z.string().optional().nullable(),
   titulo: z.string().min(1, 'Título é obrigatório'),
   subtitulo: z.string().optional().nullable(),
   autor: z.string().optional().nullable(),
