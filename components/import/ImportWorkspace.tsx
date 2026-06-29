@@ -23,11 +23,11 @@ export function ImportWorkspace() {
         description="Importe obras e exemplares a partir de uma planilha Excel (.xlsx)"
         breadcrumb={
           <Link
-            href="/acervo/consulta"
+            href="/settings"
             className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            Voltar ao catálogo
+            Voltar para Administração
           </Link>
         }
       />

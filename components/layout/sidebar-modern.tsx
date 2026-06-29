@@ -15,7 +15,6 @@ import {
   Menu,
   ArrowLeftRight,
   ClipboardList,
-  Upload,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -35,7 +34,6 @@ const menuItems: MenuItem[] = [
   { label: 'Dashboard',     href: '/',                icon: LayoutDashboard                         },
   { label: 'Circulação',    href: '/circulacao',      icon: ArrowLeftRight                          },
   { label: 'Catálogo',      href: '/acervo/consulta', icon: BookOpen,    match: '/acervo'           },
-  { label: 'Importar',      href: '/acervo/importar', icon: Upload                                  },
   { label: 'Inventário',    href: '/inventario',      icon: ClipboardList                           },
   { label: 'Leitores',      href: '/members',         icon: Users                                   },
   { label: 'Relatórios',    href: '/reports',         icon: BarChart3                               },

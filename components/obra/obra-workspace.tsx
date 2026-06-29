@@ -42,6 +42,7 @@ type ExemplarDTO = {
   isbn: string | null
   tipoPublicacao: string | null
   classificacao: string | null
+  cutter: string | null
   titulo: string
   subtitulo: string | null
   autor: string | null
@@ -728,12 +729,12 @@ function EditExemplarDrawer({ open, onClose, exemplar, onSaved }: {
   }
 
   return (
-    <Drawer
+    <Modal
       open={open}
       onClose={onClose}
       title="Editar Exemplar"
       description={exemplar ? `${exemplar.codigoExemplar}` : ''}
-      width="sm"
+      size="md"
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
@@ -806,7 +807,7 @@ function EditExemplarDrawer({ open, onClose, exemplar, onSaved }: {
           </p>
         )}
       </div>
-    </Drawer>
+    </Modal>
   )
 }
 
@@ -979,6 +980,7 @@ function EditObraDrawer({ open, obra, onClose, onSaved }: {
   const [anoPublicacao,  setAnoPublicacao]  = useState('')
   const [edicao,         setEdicao]         = useState('')
   const [classificacao,  setClassificacao]  = useState('')
+  const [cutter,         setCutter]         = useState('')
   const [assunto1,       setAssunto1]       = useState('')
   const [assunto2,       setAssunto2]       = useState('')
   const [assunto3,       setAssunto3]       = useState('')
@@ -997,6 +999,7 @@ function EditObraDrawer({ open, obra, onClose, onSaved }: {
       setAnoPublicacao(obra.anoPublicacao?.toString() ?? '')
       setEdicao(obra.edicao ?? '')
       setClassificacao(obra.classificacao ?? '')
+      setCutter(obra.cutter ?? '')
       setAssunto1(obra.assunto1 ?? '')
       setAssunto2(obra.assunto2 ?? '')
       setAssunto3(obra.assunto3 ?? '')
@@ -1022,6 +1025,7 @@ function EditObraDrawer({ open, obra, onClose, onSaved }: {
           anoPublicacao: anoPublicacao ? parseInt(anoPublicacao, 10) : null,
           edicao: edicao.trim() || null,
           classificacao: classificacao.trim() || null,
+          cutter: cutter.trim() || null,
           assunto1: assunto1.trim() || null,
           assunto2: assunto2.trim() || null,
           assunto3: assunto3.trim() || null,
@@ -1042,12 +1046,12 @@ function EditObraDrawer({ open, obra, onClose, onSaved }: {
   }
 
   return (
-    <Drawer
+    <Modal
       open={open}
       onClose={onClose}
       title="Editar Obra"
       description={obra?.titulo ?? ''}
-      width="md"
+      size="xl"
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
@@ -1093,6 +1097,10 @@ function EditObraDrawer({ open, obra, onClose, onSaved }: {
             <Input id="eo-cdd" value={classificacao} onChange={e => setClassificacao(e.target.value)} placeholder="ex: 869.3" />
           </div>
           <div className="space-y-2">
+            <label className="ds-label text-slate-600" htmlFor="eo-cutter">Notação do Autor (Cutter)</label>
+            <Input id="eo-cutter" value={cutter} onChange={e => setCutter(e.target.value)} placeholder="ex: S586c" />
+          </div>
+          <div className="space-y-2">
             <label className="ds-label text-slate-600" htmlFor="eo-tipo">Tipo de publicação</label>
             <Input id="eo-tipo" value={tipoPublicacao} onChange={e => setTipoPublicacao(e.target.value)} placeholder="Livro, Periódico..." />
           </div>
@@ -1120,7 +1128,7 @@ function EditObraDrawer({ open, obra, onClose, onSaved }: {
           </p>
         )}
       </div>
-    </Drawer>
+    </Modal>
   )
 }
 

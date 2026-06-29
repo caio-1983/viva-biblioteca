@@ -3,88 +3,94 @@
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import * as Icons from 'lucide-react'
+import type { DashboardMetrics } from '@/lib/dashboard/dashboard.types'
 
-interface KpiCard {
-  title: string
-  value: number
-  icon: string
-  color: string
-  bgColor: string
-  textColor: string
-  unit?: string
+interface KpiCardsProps {
+  data?: DashboardMetrics
+  loading?: boolean
 }
 
-const kpiCards: KpiCard[] = [
+interface KpiCardDef {
+  title: string
+  key: keyof DashboardMetrics
+  icon: string
+  iconBg: string
+  iconColor: string
+  valueColor: string
+  subtitle?: string
+}
+
+const kpiCardDefs: KpiCardDef[] = [
   {
     title: 'Livros Disponíveis',
-    value: 413,
+    key: 'livrosDisponiveis',
     icon: 'BookOpen',
-    color: 'from-blue-500 to-blue-600',
-    bgColor: 'bg-blue-50',
-    textColor: 'text-blue-700',
-    unit: 'de 540 no total',
+    iconBg: 'bg-blue-100',
+    iconColor: 'text-blue-600',
+    valueColor: 'text-blue-700',
   },
   {
     title: 'Livros Emprestados',
-    value: 27,
+    key: 'livrosEmprestados',
     icon: 'BookMarked',
-    color: 'from-green-500 to-green-600',
-    bgColor: 'bg-green-50',
-    textColor: 'text-green-700',
-    unit: 'em circulação',
+    iconBg: 'bg-green-100',
+    iconColor: 'text-green-600',
+    valueColor: 'text-green-700',
+    subtitle: 'em circulação',
   },
   {
     title: 'Em Atraso',
-    value: 4,
+    key: 'emAtraso',
     icon: 'Clock',
-    color: 'from-orange-500 to-orange-600',
-    bgColor: 'bg-orange-50',
-    textColor: 'text-orange-700',
-    unit: 'devoluções pendentes',
+    iconBg: 'bg-orange-100',
+    iconColor: 'text-orange-600',
+    valueColor: 'text-orange-700',
   },
   {
     title: 'Membros Cadastrados',
-    value: 128,
+    key: 'membrosCadastrados',
     icon: 'Users',
-    color: 'from-purple-500 to-purple-600',
-    bgColor: 'bg-purple-50',
-    textColor: 'text-purple-700',
-    unit: 'membros ativos',
+    iconBg: 'bg-purple-100',
+    iconColor: 'text-purple-600',
+    valueColor: 'text-purple-700',
   },
 ]
 
-export function KpiCards() {
+export function KpiCards({ data, loading }: KpiCardsProps) {
   return (
-    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-      {kpiCards.map((kpi, index) => {
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      {kpiCardDefs.map((kpi, index) => {
         const Icon = Icons[kpi.icon as keyof typeof Icons]
+        const value = data?.[kpi.key]
 
         return (
           <Card
             key={index}
-            className={cn('overflow-hidden border border-slate-200 hover:shadow-md transition-shadow', kpi.bgColor)}
+            className={cn(
+              'bg-white border border-slate-200',
+              'transition-all duration-200 hover:shadow-md'
+            )}
           >
-            <div className="p-8">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <p className="label-small">
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                     {kpi.title}
                   </p>
-                  <p className={cn('mt-3 text-4xl font-bold', kpi.textColor)}>
-                    {kpi.value.toLocaleString('pt-BR')}
-                  </p>
-                  {kpi.unit && (
-                    <p className="mt-2 text-xs text-slate-500">{kpi.unit}</p>
+                  {loading ? (
+                    <div className="mt-2 h-8 w-16 animate-pulse rounded bg-slate-100" />
+                  ) : (
+                    <p className={cn('mt-1 text-2xl font-bold', kpi.valueColor)}>
+                      {value !== undefined ? value.toLocaleString('pt-BR') : '--'}
+                    </p>
+                  )}
+                  {kpi.subtitle && (
+                    <p className="mt-0.5 text-xs text-slate-400">{kpi.subtitle}</p>
                   )}
                 </div>
-                <div
-                  className={cn(
-                    'p-3 rounded-lg bg-linear-to-br',
-                    kpi.color
-                  )}
-                >
+                <div className={cn('p-2.5 rounded-lg flex-shrink-0', kpi.iconBg)}>
                   {/* @ts-expect-error lucide-react dynamic icon */}
-                  <Icon className="h-6 w-6 text-white" />
+                  <Icon className={cn('h-5 w-5', kpi.iconColor)} />
                 </div>
               </div>
             </div>

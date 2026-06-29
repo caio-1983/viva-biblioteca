@@ -11,6 +11,7 @@ export const ObraUpdateSchema = z.object({
   edicao: z.string().optional().nullable(),
   idioma: z.string().optional().nullable(),
   classificacao: z.string().optional().nullable(),
+  cutter: z.string().optional().nullable(),
   assunto1: z.string().optional().nullable(),
   assunto2: z.string().optional().nullable(),
   assunto3: z.string().optional().nullable(),

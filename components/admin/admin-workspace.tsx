@@ -143,6 +143,25 @@ function ComingSoonItem({ icon, label, description }: {
   )
 }
 
+// ─── Colunas esperadas ────────────────────────────────────────────────────────
+
+const IMPORT_COLUMNS: Array<{ col: string; required: boolean }> = [
+  { col: 'TÍTULO',           required: true  },
+  { col: 'Subtítulo',        required: false },
+  { col: 'Autor',            required: true  },
+  { col: 'Edição',           required: false },
+  { col: 'Ano',              required: false },
+  { col: 'Editora',          required: false },
+  { col: 'ISBN',             required: false },
+  { col: 'Classificação',    required: false },
+  { col: 'Notação do Autor', required: false },
+  { col: 'Assunto1',         required: false },
+  { col: 'Assunto2',         required: false },
+  { col: 'Assunto3',         required: false },
+  { col: 'Tombo',            required: false },
+  { col: 'Observação',       required: false },
+]
+
 // ─── ImportDrawer ─────────────────────────────────────────────────────────────
 
 function ImportDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -187,19 +206,46 @@ function ImportDrawer({ open, onClose }: { open: boolean; onClose: () => void })
     }
   }
 
+  function downloadReport() {
+    if (!result || result.errors.length === 0) return
+    const bom = '﻿'
+    const header = 'Linha;Erro\n'
+    const rows = result.errors.map(e => `${e.row};${e.reason}`).join('\n')
+    const blob = new Blob([bom + header + rows], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'relatorio-importacao.csv'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   const fmtSize = (b: number) =>
     b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(1)} KB` : `${(b / 1048576).toFixed(1)} MB`
+
+  const hasErrors = (result?.errors.length ?? 0) > 0
+  const allGood   = result && result.errors.length === 0 && result.imported > 0
 
   return (
     <Drawer
       open={open}
       onClose={onClose}
       title="Importar CSV"
-      description="Colunas esperadas: TÍTULO; Subtítulo; Autor; Edição; Ano; Editora; ISBN; Classificação; Notação do Autor; Assunto1; Assunto2; Assunto3; Tombo; Observação"
+      description="Importe o acervo em lote a partir de um arquivo CSV separado por ponto e vírgula"
       width="md"
       footer={
         result ? (
-          <Button onClick={onClose}>Concluir</Button>
+          <div className="flex gap-2 w-full">
+            {hasErrors && (
+              <Button variant="outline" onClick={downloadReport} className="gap-1.5">
+                <Download className="size-3.5" />
+                Exportar relatório
+              </Button>
+            )}
+            <Button onClick={onClose} className="ml-auto">Concluir</Button>
+          </div>
         ) : (
           <>
             <Button variant="outline" onClick={onClose}>Cancelar</Button>
@@ -214,14 +260,27 @@ function ImportDrawer({ open, onClose }: { open: boolean; onClose: () => void })
       }
     >
       <div className="space-y-5">
-        {/* Result */}
+
+        {/* ── Resultado ── */}
         {result ? (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-              <CheckCircle2 className="size-5 text-emerald-600 shrink-0" />
+
+            {/* Banner status */}
+            <div className={cn(
+              'flex items-center gap-3 px-4 py-3 rounded-lg border',
+              allGood
+                ? 'bg-emerald-50 border-emerald-200'
+                : 'bg-amber-50 border-amber-200'
+            )}>
+              {allGood
+                ? <CheckCircle2 className="size-5 text-emerald-600 shrink-0" />
+                : <AlertTriangle className="size-5 text-amber-600 shrink-0" />
+              }
               <div>
-                <p className="text-sm font-semibold text-emerald-700">Importação concluída</p>
-                <p className="text-xs text-emerald-600 mt-0.5">
+                <p className={cn('text-sm font-semibold', allGood ? 'text-emerald-700' : 'text-amber-700')}>
+                  Importação concluída
+                </p>
+                <p className={cn('text-xs mt-0.5', allGood ? 'text-emerald-600' : 'text-amber-600')}>
                   {result.imported} importado{result.imported !== 1 ? 's' : ''} ·{' '}
                   {result.skipped} ignorado{result.skipped !== 1 ? 's' : ''} ·{' '}
                   {result.errors.length} erro{result.errors.length !== 1 ? 's' : ''}
@@ -229,11 +288,13 @@ function ImportDrawer({ open, onClose }: { open: boolean; onClose: () => void })
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 text-center">
+            {/* Cards de contagem */}
+            <div className="grid grid-cols-4 gap-2 text-center">
               {[
-                { label: 'Total', value: result.total, color: 'text-slate-700' },
-                { label: 'Importados', value: result.imported, color: 'text-emerald-600' },
-                { label: 'Ignorados', value: result.skipped, color: 'text-amber-600' },
+                { label: 'Total',      value: result.total,          color: 'text-slate-700'                                    },
+                { label: 'Importados', value: result.imported,       color: 'text-emerald-600'                                  },
+                { label: 'Ignorados',  value: result.skipped,        color: 'text-amber-600'                                    },
+                { label: 'Erros',      value: result.errors.length,  color: hasErrors ? 'text-red-600' : 'text-slate-500'       },
               ].map(({ label, value, color }) => (
                 <div key={label} className="p-3 bg-slate-50 rounded-lg border border-border/60">
                   <p className={cn('text-xl font-bold', color)}>{value}</p>
@@ -242,14 +303,30 @@ function ImportDrawer({ open, onClose }: { open: boolean; onClose: () => void })
               ))}
             </div>
 
-            {result.errors.length > 0 && (
-              <div className="space-y-1 max-h-40 overflow-y-auto">
-                <p className="text-xs font-medium text-red-600 uppercase tracking-wide">Erros</p>
-                {result.errors.map((e, i) => (
-                  <p key={i} className="text-xs text-slate-500">
-                    <span className="font-mono text-slate-400">Linha {e.row}: </span>{e.reason}
-                  </p>
-                ))}
+            {/* Tabela de erros */}
+            {hasErrors && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-red-600 uppercase tracking-wide">
+                  {result.errors.length} erro{result.errors.length !== 1 ? 's' : ''} encontrado{result.errors.length !== 1 ? 's' : ''}
+                </p>
+                <div className="rounded-lg border border-red-100 overflow-hidden max-h-60 overflow-y-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-red-50 border-b border-red-100 sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-semibold text-red-700 w-16">Linha</th>
+                        <th className="px-3 py-2 text-left font-semibold text-red-700">Erro</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-red-50 bg-white">
+                      {result.errors.map((e, i) => (
+                        <tr key={i} className="hover:bg-red-50/40 transition-colors">
+                          <td className="px-3 py-2 font-mono text-slate-500">{e.row}</td>
+                          <td className="px-3 py-2 text-slate-600">{e.reason}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
@@ -260,18 +337,29 @@ function ImportDrawer({ open, onClose }: { open: boolean; onClose: () => void })
               </div>
             )}
           </div>
+
         ) : (
           <>
-            {/* Download template */}
-            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-border/60">
-              <div>
-                <p className="text-sm font-medium text-slate-700">Modelo de planilha</p>
-                <p className="text-xs text-slate-400">CSV com as colunas corretas</p>
+            {/* Layout esperado */}
+            <div className="rounded-lg border border-border/60 bg-slate-50 p-4">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                Layout esperado da planilha
+              </p>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+                {IMPORT_COLUMNS.map(({ col, required }) => (
+                  <div key={col} className="flex items-center gap-2 text-xs">
+                    <span className={cn(
+                      'inline-block size-1.5 rounded-full shrink-0',
+                      required ? 'bg-blue-500' : 'bg-slate-300'
+                    )} />
+                    <span className="font-mono text-slate-600">{col}</span>
+                    {required && <span className="text-blue-600 font-semibold">*</span>}
+                  </div>
+                ))}
               </div>
-              <Button size="sm" variant="outline" className="gap-1.5" disabled>
-                <Download className="size-3.5" />
-                Baixar modelo
-              </Button>
+              <p className="text-[11px] text-slate-400 mt-3">
+                Separador: ponto e vírgula (;) · * campos obrigatórios
+              </p>
             </div>
 
             {/* Drop zone */}
@@ -282,9 +370,9 @@ function ImportDrawer({ open, onClose }: { open: boolean; onClose: () => void })
               onClick={() => inputRef.current?.click()}
               className={cn(
                 'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors',
-                dragging ? 'border-brand-400 bg-brand-50'
+                dragging ? 'border-blue-400 bg-blue-50'
                          : file ? 'border-emerald-300 bg-emerald-50'
-                                : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50'
+                                : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'
               )}
             >
               <input
@@ -617,19 +705,39 @@ export function AdminWorkspace() {
       <SectionCard
         id="importacoes"
         icon={<Upload className="size-4" />}
-        title="Importações"
-        description="Importe acervo em lote via CSV ou formatos bibliotecários"
+        title="Importação de Acervo"
+        description="Importe obras e exemplares em lote a partir de planilha ou arquivo CSV"
         badge="parcial"
       >
         <div className="space-y-0 -my-1">
-          {/* CSV — ativo */}
+
+          {/* XLSX — ferramenta completa */}
+          <div className="flex items-center justify-between py-4 border-b border-border/40">
+            <div className="flex items-start gap-3">
+              <FileText className="size-4 text-blue-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-slate-700">Importar Planilha Excel</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Validação em duas etapas · pré-visualização de erros · relatório detalhado
+                </p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" className="gap-1.5 shrink-0" asChild>
+              <Link href="/acervo/importar">
+                <Upload className="size-3.5" />
+                Abrir
+              </Link>
+            </Button>
+          </div>
+
+          {/* CSV — drawer rápido */}
           <div className="flex items-center justify-between py-4 border-b border-border/40">
             <div className="flex items-start gap-3">
               <FileText className="size-4 text-emerald-600 mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm font-medium text-slate-700">Importar CSV / Planilha</p>
+                <p className="text-sm font-medium text-slate-700">Importar CSV</p>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Colunas: TÍTULO; Subtítulo; Autor; Edição; Ano; Editora; ISBN; Classificação; Notação do Autor; Assunto1; Assunto2; Assunto3; Tombo; Observação
+                  Arquivo separado por ponto e vírgula · importação direta sem etapa de pré-visualização
                 </p>
               </div>
             </div>
@@ -637,6 +745,24 @@ export function AdminWorkspace() {
               <Upload className="size-3.5" />
               Importar
             </Button>
+          </div>
+
+          {/* Layout esperado — referência rápida */}
+          <div className="py-4 border-b border-border/40">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Layout esperado da planilha</p>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
+              {IMPORT_COLUMNS.map(({ col, required }) => (
+                <div key={col} className="flex items-center gap-2 text-xs">
+                  <span className={cn(
+                    'inline-block size-1.5 rounded-full shrink-0',
+                    required ? 'bg-blue-500' : 'bg-slate-300'
+                  )} />
+                  <span className="font-mono text-slate-600">{col}</span>
+                  {required && <span className="text-blue-600 font-semibold">*</span>}
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-3">* campos obrigatórios</p>
           </div>
 
           {/* Histórico — placeholder */}
