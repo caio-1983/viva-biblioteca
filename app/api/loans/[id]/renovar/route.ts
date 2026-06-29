@@ -3,7 +3,7 @@ import { emprestimoService } from '@/src/services/emprestimo.service'
 import { toEmprestimoListItemDTO } from '@/src/dto/emprestimo.dto'
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -11,7 +11,15 @@ export async function POST(
     const id = parseInt(idStr, 10)
     if (isNaN(id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
 
-    const emprestimo = await emprestimoService.renovar(id)
+    let dataVencimento: Date | undefined
+    try {
+      const body = await request.json()
+      if (body?.dataPrevistaDevolucao) {
+        dataVencimento = new Date(body.dataPrevistaDevolucao)
+      }
+    } catch { /* body vazio é ok */ }
+
+    const emprestimo = await emprestimoService.renovar(id, dataVencimento)
     return NextResponse.json(toEmprestimoListItemDTO(emprestimo))
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro ao renovar empréstimo'

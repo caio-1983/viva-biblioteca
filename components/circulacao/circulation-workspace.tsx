@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { usePageTitle } from '@/components/page-context'
 import {
   BookMarked, Undo2, RefreshCw, Search, CheckCircle, AlertTriangle,
-  Clock, Check, ChevronRight, ChevronLeft, BookOpen, Users,
-  RotateCcw, CalendarClock, Info, ArrowLeftRight,
+  Clock, Check, ChevronRight, ChevronLeft, BookOpen, Users, User,
+  RotateCcw, CalendarClock, Info, ArrowLeftRight, BookText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -280,6 +281,7 @@ function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
 
 export function CirculationWorkspace() {
   const { setPageInfo } = usePageTitle()
+  const searchParams = useSearchParams()
   useEffect(() => {
     setPageInfo('Circulação', 'Empréstimos, devoluções e renovações')
   }, [setPageInfo])
@@ -321,6 +323,9 @@ export function CirculationWorkspace() {
   const [renovSubmitting, setRenovSubmitting] = useState<number | null>(null)
   const [renovSuccess,    setRenovSuccess]    = useState<number | null>(null)
   const [renovError,      setRenovError]      = useState<{ id: number; msg: string } | null>(null)
+  const [renovTarget,      setRenovTarget]      = useState<{ id: number; titulo: string; leitor: string; vencimentoAtual: string } | null>(null)
+  const [renovNovaData,    setRenovNovaData]    = useState('')
+  const [renovObservacao,  setRenovObservacao]  = useState('')
 
   // ── Load data ────────────────────────────────────────────────────────────────
 
@@ -413,6 +418,16 @@ export function CirculationWorkspace() {
       l.codigoExemplar.toLowerCase().includes(q)
     )
   }, [activeLoans, renovQuery])
+
+  // ── Pre-select leitor from URL param (e.g. coming from /members) ────────────
+
+  useEffect(() => {
+    const leitorId = searchParams.get('leitorId')
+    if (!leitorId || usuarios.length === 0 || wizardUser) return
+    const user = usuarios.find(u => u.id === Number(leitorId))
+    if (user) selectUser(user)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuarios, searchParams])
 
   // ── Wizard: auto-select exemplar when obra is chosen ─────────────────────────
 
@@ -524,16 +539,33 @@ export function CirculationWorkspace() {
 
   // ── Renovar empréstimo ────────────────────────────────────────────────────────
 
-  async function handleRenovar(loanId: number) {
+  function openRenovarDialog(loan: LoanDTO) {
+    const base = new Date(loan.dataPrevistaDevolucao) > new Date()
+      ? loan.dataPrevistaDevolucao
+      : getTodayStr()
+    const d = new Date(base)
+    d.setDate(d.getDate() + 14)
+    setRenovNovaData(d.toISOString().split('T')[0])
+    setRenovObservacao('')
+    setRenovTarget({ id: loan.id, titulo: loan.titulo, leitor: loan.nomeCompleto, vencimentoAtual: loan.dataPrevistaDevolucao })
+    setRenovError(null)
+  }
+
+  async function handleRenovar(loanId: number, dataPrevistaDevolucao: string) {
     setRenovSubmitting(loanId)
     setRenovError(null)
     setRenovSuccess(null)
     try {
-      const res = await fetch(`/api/loans/${loanId}/renovar`, { method: 'POST' })
+      const res = await fetch(`/api/loans/${loanId}/renovar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dataPrevistaDevolucao, ...(renovObservacao.trim() ? { observacao: renovObservacao.trim() } : {}) }),
+      })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
         throw new Error(d.error ?? 'Erro ao renovar')
       }
+      setRenovTarget(null)
       setRenovSuccess(loanId)
       await loadData()
       setTimeout(() => setRenovSuccess(null), 3000)
@@ -1208,7 +1240,7 @@ export function CirculationWorkspace() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleRenovar(loan.id)}
+                      onClick={() => openRenovarDialog(loan)}
                       disabled={renovSubmitting === loan.id}
                       className={cn(
                         'gap-1.5',
@@ -1232,6 +1264,153 @@ export function CirculationWorkspace() {
             })}
           </div>
         )}
+
+        {/* Dialog: renovação de empréstimo */}
+        {(() => {
+          const diasProrrogados = renovTarget && renovNovaData
+            ? Math.round((new Date(renovNovaData + 'T12:00:00').getTime() - new Date(renovTarget.vencimentoAtual + 'T12:00:00').getTime()) / 86_400_000)
+            : 0
+
+          return (
+            <Drawer
+              open={!!renovTarget}
+              onClose={() => setRenovTarget(null)}
+              title={
+                <span className="flex items-center gap-2">
+                  <span className="flex items-center justify-center size-7 rounded-lg bg-brand-50 shrink-0">
+                    <CalendarClock className="size-4 text-brand-600" />
+                  </span>
+                  <span>Renovar empréstimo</span>
+                </span>
+              }
+              width="md"
+              footer={
+                <>
+                  <Button variant="outline" onClick={() => setRenovTarget(null)}>Cancelar</Button>
+                  <Button
+                    onClick={() => renovTarget && handleRenovar(renovTarget.id, renovNovaData)}
+                    disabled={!renovNovaData || !!renovSubmitting}
+                    className="gap-1.5"
+                  >
+                    {renovSubmitting ? <Spinner size="sm" /> : <CalendarClock className="size-3.5" />}
+                    Confirmar renovação
+                  </Button>
+                </>
+              }
+            >
+              <div className="space-y-6">
+
+                {/* Contexto: obra + leitor */}
+                <div className="bg-slate-50 rounded-xl border border-border/60 p-4 space-y-2">
+                  <div className="flex items-start gap-3">
+                    <div className="size-8 rounded-lg bg-white border border-border/60 flex items-center justify-center shrink-0 mt-0.5">
+                      <BookText className="size-4 text-slate-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 leading-snug line-clamp-2">
+                        {renovTarget?.titulo}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
+                        <User className="size-3.5 shrink-0" />
+                        <span>{renovTarget?.leitor}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vencimento atual */}
+                <div className="bg-amber-50 border border-amber-200/70 rounded-xl p-4">
+                  <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider mb-1.5">
+                    Vencimento atual
+                  </p>
+                  <p className="text-xl font-semibold text-slate-800 tabular-nums">
+                    {renovTarget ? fmtDate(renovTarget.vencimentoAtual) : '—'}
+                  </p>
+                </div>
+
+                {/* Novo vencimento */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700 block">
+                    Novo vencimento
+                  </label>
+                  <p className="text-xs text-slate-400 mb-2">Selecione a nova data de devolução.</p>
+                  <Input
+                    type="date"
+                    value={renovNovaData}
+                    onChange={e => setRenovNovaData(e.target.value)}
+                    min={getTodayStr()}
+                  />
+                </div>
+
+                {/* Observações */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700 block">
+                    Observações
+                  </label>
+                  <textarea
+                    value={renovObservacao}
+                    onChange={e => setRenovObservacao(e.target.value.slice(0, 500))}
+                    placeholder="Informe o motivo da renovação ou alguma observação (opcional)."
+                    maxLength={500}
+                    rows={4}
+                    className={cn(
+                      'w-full resize-none rounded-lg border border-input bg-background px-3 py-2.5 text-sm',
+                      'placeholder:text-muted-foreground',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                      'disabled:cursor-not-allowed disabled:opacity-50'
+                    )}
+                  />
+                  <p className="text-[11px] text-slate-400 text-right tabular-nums">
+                    {renovObservacao.length}/500
+                  </p>
+                </div>
+
+                {/* Resumo da renovação */}
+                {renovNovaData && renovTarget && (
+                  <div className="bg-emerald-50 border border-emerald-200/70 rounded-xl p-4">
+                    <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider mb-3">
+                      Resumo da renovação
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] text-slate-400 mb-0.5">Vencimento atual</p>
+                        <p className="text-sm font-medium text-slate-700 tabular-nums">
+                          {fmtDate(renovTarget.vencimentoAtual)}
+                        </p>
+                      </div>
+                      <ArrowLeftRight className="size-4 text-slate-300 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] text-slate-400 mb-0.5">Novo vencimento</p>
+                        <p className="text-sm font-medium text-slate-700 tabular-nums">
+                          {fmtDate(renovNovaData + 'T12:00:00')}
+                        </p>
+                      </div>
+                      {diasProrrogados !== 0 && (
+                        <span className={cn(
+                          'ml-auto shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold tabular-nums',
+                          diasProrrogados > 0
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-red-100 text-red-600'
+                        )}>
+                          {diasProrrogados > 0 ? '+' : ''}{diasProrrogados}d
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Erro */}
+                {renovError && renovTarget && renovError.id === renovTarget.id && (
+                  <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200/70 rounded-lg">
+                    <AlertTriangle className="size-4 text-red-500 shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-600">{renovError.msg}</p>
+                  </div>
+                )}
+
+              </div>
+            </Drawer>
+          )
+        })()}
       </div>
     )
   }

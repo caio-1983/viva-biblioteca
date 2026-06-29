@@ -28,8 +28,8 @@ const POSITION: Record<DrawerSide, string> = {
 export interface DrawerProps {
   open: boolean
   onClose: () => void
-  title: string
-  description?: string
+  title: React.ReactNode
+  description?: React.ReactNode
   children: React.ReactNode
   footer?: React.ReactNode
   side?: DrawerSide

@@ -63,15 +63,20 @@ export class EmprestimoService {
     return emprestimo
   }
 
-  async renovar(id: number) {
+  async renovar(id: number, dataVencimento?: Date) {
     const emprestimo = await emprestimoRepository.findById(id)
     if (!emprestimo) throw new Error('Empréstimo não encontrado')
     if (emprestimo.status === 'DEVOLVIDO') throw new Error('Empréstimo já devolvido')
     if (emprestimo.status === 'CANCELADO') throw new Error('Empréstimo cancelado')
 
-    const config = await configuracaoRepository.get()
-    const novaData = new Date(emprestimo.dataPrevistaDevolucao)
-    novaData.setDate(novaData.getDate() + config.prazoEmprestimoDias)
+    let novaData: Date
+    if (dataVencimento) {
+      novaData = dataVencimento
+    } else {
+      const config = await configuracaoRepository.get()
+      novaData = new Date(emprestimo.dataPrevistaDevolucao)
+      novaData.setDate(novaData.getDate() + config.prazoEmprestimoDias)
+    }
 
     return emprestimoRepository.renovar(id, novaData)
   }

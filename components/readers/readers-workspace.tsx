@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Search, Users, Mail, Phone, Calendar, Clock, BookOpen,
   Undo2, RotateCcw, AlertTriangle, CheckCircle2, Loader2,
@@ -366,6 +367,7 @@ function ReturnModal({
 export function ReadersWorkspace() {
   const { toast } = useToast()
   const { setPageInfo } = usePageTitle()
+  const router = useRouter()
 
   useEffect(() => {
     setPageInfo('Leitores', 'Perfil, empréstimos e histórico de cada leitor')
@@ -662,7 +664,7 @@ export function ReadersWorkspace() {
 
                     {/* Quick actions */}
                     <div className="flex items-center gap-2 shrink-0">
-                      <Button size="sm" className="gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent('viva:search:open'))}>
+                      <Button size="sm" className="gap-1.5 text-xs" onClick={() => router.push(`/circulacao?leitorId=${selectedLeitor.id}`)}>
                         <BookMarked className="size-3.5" />
                         Novo empréstimo
                       </Button>
