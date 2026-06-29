@@ -21,7 +21,8 @@
     "pg:migrate": "tsx scripts/migration/sqlite-to-postgres.ts",
     "pg:validate": "tsx scripts/migration/validate-migration.ts",
     "seed:usuario-seq": "tsx scripts/concurrency/seed-usuario-seq.ts",
-    "test:concurrency": "tsx scripts/concurrency/run-all.ts"
+    "test:concurrency": "tsx scripts/concurrency/run-all.ts",
+    "manutencao:limpar-acervo": "tsx scripts/manutencao/limpar-acervo.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
