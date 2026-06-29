@@ -61,8 +61,8 @@ export class RelatorioService {
   private async getAssuntos(limit: number) {
     const rows = await prisma.$queryRaw<Array<{ nome: string; total: number | bigint }>>`
       SELECT assunto1 AS nome, COUNT(*) AS total
-      FROM Obra
-      WHERE ativo = 1 AND assunto1 IS NOT NULL AND assunto1 != ''
+      FROM "Obra"
+      WHERE ativo = true AND assunto1 IS NOT NULL AND assunto1 != ''
       GROUP BY assunto1
       ORDER BY total DESC
       LIMIT ${limit}

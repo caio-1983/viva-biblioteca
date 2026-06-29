@@ -3,18 +3,30 @@ import { LeitorCreate, LeitorUpdate } from '@/src/types/leitor'
 
 export class LeitorRepository {
   async create(data: LeitorCreate) {
-    const numeroCadastro = await this.generateNumeroCadastro()
-    return prisma.usuario.create({
-      data: {
-        numeroCadastro,
-        nomeCompleto: data.nomeCompleto.trim(),
-        cpf: data.cpf?.trim() || null,
-        dataNascimento: data.dataNascimento ?? null,
-        celular: data.celular?.trim() || null,
-        email: data.email?.trim() || null,
-        membro: data.membro !== false,
-        ativo: true,
-      },
+    return prisma.$transaction(async (tx) => {
+      // Incremento atômico via upsert na tabela Sequencia (idêntico ao codigoExemplar).
+      // INSERT ... ON CONFLICT DO UPDATE no PostgreSQL é atômico — elimina race condition.
+      // Na ausência da linha 'usuario', inicializa em 1 (fresh deploy).
+      // Para ambientes com usuários pré-existentes, executar: npm run seed:usuario-seq
+      const seq = await tx.sequencia.upsert({
+        where: { nome: 'usuario' },
+        update: { valor: { increment: 1 } },
+        create: { nome: 'usuario', valor: 1 },
+      })
+      const numeroCadastro = `US${String(seq.valor).padStart(6, '0')}`
+
+      return tx.usuario.create({
+        data: {
+          numeroCadastro,
+          nomeCompleto: data.nomeCompleto.trim(),
+          cpf: data.cpf?.trim() || null,
+          dataNascimento: data.dataNascimento ?? null,
+          celular: data.celular?.trim() || null,
+          email: data.email?.trim() || null,
+          membro: data.membro !== false,
+          ativo: true,
+        },
+      })
     })
   }
 
@@ -50,12 +62,6 @@ export class LeitorRepository {
 
   async countAtivos() {
     return prisma.usuario.count({ where: { ativo: true } })
-  }
-
-  private async generateNumeroCadastro(): Promise<string> {
-    const last = await prisma.usuario.findFirst({ orderBy: { createdAt: 'desc' } })
-    const next = last ? parseInt(last.numeroCadastro.slice(2), 10) + 1 : 1
-    return `US${String(next).padStart(6, '0')}`
   }
 }
 

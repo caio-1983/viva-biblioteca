@@ -1,5 +1,5 @@
+import { prisma } from '@/lib/prisma'
 import { emprestimoRepository } from '@/src/repositories/emprestimo.repository'
-import { exemplarRepository } from '@/src/repositories/exemplar.repository'
 import { configuracaoRepository } from '@/src/repositories/configuracao.repository'
 import { EmprestimoCreate } from '@/src/types/emprestimo'
 
@@ -7,21 +7,38 @@ export class EmprestimoService {
   async registrar(data: EmprestimoCreate) {
     const config = await configuracaoRepository.get()
 
-    const exemplar = await exemplarRepository.findById(data.exemplarId)
-    if (!exemplar || !exemplar.ativo) throw new Error('Exemplar não encontrado')
-    if (exemplar.status !== 'DISPONIVEL') throw new Error('Exemplar não está disponível')
+    return prisma.$transaction(async (tx) => {
+      const ativos = await tx.emprestimo.count({
+        where: { usuarioId: data.usuarioId, status: 'ATIVO' },
+      })
+      if (ativos >= config.maxEmprestimos) {
+        throw new Error(
+          `Usuário já possui o limite de ${config.maxEmprestimos} títulos emprestados simultaneamente`
+        )
+      }
 
-    const ativos = await emprestimoRepository.countAtivosByLeitorId(data.usuarioId)
-    if (ativos >= config.maxEmprestimos) {
-      throw new Error(
-        `Usuário já possui o limite de ${config.maxEmprestimos} títulos emprestados simultaneamente`
-      )
-    }
+      // Check-and-set atômico: atualiza SOMENTE se o exemplar ainda está DISPONIVEL.
+      // Elimina a race condition TOCTOU de verificar e depois atualizar separadamente.
+      const updated = await tx.exemplar.updateMany({
+        where: { id: data.exemplarId, status: 'DISPONIVEL', ativo: true },
+        data: { status: 'EMPRESTADO' },
+      })
+      if (updated.count === 0) {
+        const exemplar = await tx.exemplar.findUnique({ where: { id: data.exemplarId } })
+        if (!exemplar || !exemplar.ativo) throw new Error('Exemplar não encontrado')
+        throw new Error('Exemplar não está disponível')
+      }
 
-    const emprestimo = await emprestimoRepository.create(data)
-    await exemplarRepository.updateStatus(data.exemplarId, 'EMPRESTADO')
-
-    return emprestimo
+      return tx.emprestimo.create({
+        data: {
+          usuarioId: data.usuarioId,
+          exemplarId: data.exemplarId,
+          dataEmprestimo: data.dataEmprestimo ?? new Date(),
+          dataPrevistaDevolucao: data.dataPrevistaDevolucao,
+          status: 'ATIVO',
+        },
+      })
+    })
   }
 
   async listar(page = 1, limit = 100) {

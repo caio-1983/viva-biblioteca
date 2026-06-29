@@ -1,16 +1,27 @@
-import { emprestimoRepository } from '@/src/repositories/emprestimo.repository'
-import { exemplarRepository } from '@/src/repositories/exemplar.repository'
+import { prisma } from '@/lib/prisma'
 
 export class DevolucaoService {
   async registrar(emprestimoId: number, exemplarId: number) {
-    const emprestimo = await emprestimoRepository.findById(emprestimoId)
-    if (!emprestimo) throw new Error('Empréstimo não encontrado ou já devolvido')
-    if (emprestimo.status !== 'ATIVO') throw new Error('Empréstimo não está ativo')
+    return prisma.$transaction(async (tx) => {
+      // Check-and-set atômico: atualiza SOMENTE se o empréstimo ainda está ATIVO.
+      // Elimina a race condition de devolução dupla simultânea.
+      const updated = await tx.emprestimo.updateMany({
+        where: { id: emprestimoId, status: 'ATIVO' },
+        data: { dataDevolucao: new Date(), status: 'DEVOLVIDO' },
+      })
+      if (updated.count === 0) {
+        const emp = await tx.emprestimo.findUnique({ where: { id: emprestimoId } })
+        if (!emp) throw new Error('Empréstimo não encontrado ou já devolvido')
+        throw new Error('Empréstimo não está ativo')
+      }
 
-    await emprestimoRepository.devolver(emprestimoId)
-    await exemplarRepository.updateStatus(exemplarId, 'DISPONIVEL')
+      await tx.exemplar.update({
+        where: { id: exemplarId },
+        data: { status: 'DISPONIVEL' },
+      })
 
-    return { success: true }
+      return { success: true }
+    })
   }
 }
 

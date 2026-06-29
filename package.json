@@ -6,6 +6,7 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
+    "test": "npm run lint",
     "lint": "eslint",
     "db:seed": "node --loader ts-node/esm prisma/seed.ts",
     "db:seed:ts": "tsx prisma/seed.ts",
@@ -18,7 +19,9 @@
     "migrate:reports": "tsx scripts/etapa2/05-export-reports.ts",
     "migrate:rollback": "tsx scripts/etapa2/rollback.ts",
     "pg:migrate": "tsx scripts/migration/sqlite-to-postgres.ts",
-    "pg:validate": "tsx scripts/migration/validate-migration.ts"
+    "pg:validate": "tsx scripts/migration/validate-migration.ts",
+    "seed:usuario-seq": "tsx scripts/concurrency/seed-usuario-seq.ts",
+    "test:concurrency": "tsx scripts/concurrency/run-all.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
