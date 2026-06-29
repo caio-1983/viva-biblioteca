@@ -1,36 +1,35 @@
-# ADR-006 — Arquitetura da Aplicação e Estratégia Desktop
+# ADR-006 — Arquitetura da Aplicação
 
-**Status:** Aprovado
-**Data:** 24/06/2026
+**Status:** Atualizado — VPS-002
+**Data original:** 24/06/2026
+**Atualizado em:** 28/06/2026
 **Projeto:** VIVA Biblioteca
+
+---
+
+# Contexto
+
+A arquitetura original previa Electron como principal forma de distribuição.
+Em VPS-002 (28/06/2026), a dependência do Electron foi removida.
+O VIVA Biblioteca passa a ser uma aplicação Next.js pura.
 
 ---
 
 # Objetivo
 
-Definir oficialmente a arquitetura técnica do VIVA Biblioteca, estabelecendo uma base que permita executar a aplicação como:
-
-* Sistema Desktop (.exe) — principal forma de distribuição;
-* Sistema Web (futuro);
-* Ambiente Cliente-Servidor (futuro);
-* Ambiente Cloud (futuro).
-
-Esta decisão busca garantir que o domínio da aplicação permaneça independente da tecnologia utilizada para distribuição.
+Definir a arquitetura técnica do VIVA Biblioteca como aplicação web executada via Next.js,
+preservando total independência entre domínio e interface.
 
 ---
 
 # Visão Arquitetural
 
-O VIVA Biblioteca será desenvolvido seguindo uma arquitetura em camadas.
-
 ```text
                      Interface
 
-          Electron / Desktop
-                 ou
-             Navegador Web
+                  Navegador Web
 
-                     │
+                       │
 
 ────────────────────────────────────────
 
@@ -71,11 +70,8 @@ SQLite / PostgreSQL
 
 A regra de negócio nunca deverá depender da interface.
 
-Ou seja:
-
 A mesma lógica deverá funcionar em:
 
-* Electron;
 * Navegador;
 * API externa;
 * CLI;
@@ -83,32 +79,10 @@ A mesma lógica deverá funcionar em:
 
 ---
 
-# Desktop como Plataforma Principal
-
-O VIVA Biblioteca nasce com foco em uso local.
-
-A distribuição principal será:
-
-```text
-VIVABibliotecaSetup.exe
-```
-
-O usuário não precisará instalar:
-
-* Node.js;
-* Banco de dados;
-* Servidor Web.
-
-Tudo será instalado automaticamente.
-
----
-
-# Arquitetura Desktop
+# Arquitetura Atual
 
 ```text
 ┌────────────────────────────┐
-│        Electron            │
-├────────────────────────────┤
 │         Next.js            │
 ├────────────────────────────┤
 │       React + Tailwind     │
@@ -121,22 +95,18 @@ Tudo será instalado automaticamente.
 └────────────────────────────┘
 ```
 
-Toda a aplicação executará localmente.
+Toda a aplicação executa localmente via `npm run start` ou em servidor dedicado.
 
 ---
 
 # Banco de Dados
 
-A persistência padrão será SQLite.
+A persistência padrão é SQLite.
 
-Exemplo:
+Localização padrão:
 
 ```text
-AppData/
-
-VIVA Biblioteca/
-
-biblioteca.db
+storage/database/biblioteca.db
 ```
 
 Benefícios:
@@ -173,27 +143,13 @@ Responsável por:
 * validações;
 * permissões.
 
-Exemplo:
-
-```text
-Cadastrar Obra
-
-↓
-
-Criar Exemplar
-
-↓
-
-Registrar Empréstimo
-```
-
 ---
 
 ## Domínio
 
 Representa as regras do negócio.
 
-Entidades previstas:
+Entidades:
 
 * Obra
 * Exemplar
@@ -202,85 +158,56 @@ Entidades previstas:
 * Configuração
 * Inventário
 
-Toda decisão de negócio deverá permanecer nesta camada.
+Toda decisão de negócio permanece nesta camada.
 
 ---
 
 ## Persistência
 
-A persistência será realizada através de Repositories.
-
-Exemplo:
+Realizada através de Repositories.
 
 ```text
 ObraRepository
-
 ExemplarRepository
-
 EmprestimoRepository
 ```
 
-Nenhuma página acessará diretamente o banco.
+Nenhuma página acessa diretamente o banco.
 
 ---
 
 # ORM
 
-O Prisma será a única camada responsável pelo acesso ao banco.
+O Prisma é a única camada responsável pelo acesso ao banco.
 
-Não deverão existir:
-
-* SQL espalhado pela aplicação;
-* consultas duplicadas;
-* acesso direto ao SQLite.
-
-Toda persistência deverá passar pelos Repositories.
+Toda persistência passa pelos Repositories.
 
 ---
 
 # Banco Independente
 
-A aplicação não deverá depender de SQLite.
+A aplicação não depende de SQLite.
 
-O Repository deverá permitir:
+O Repository permite:
 
 ```text
-SQLite
-
-↓
-
-PostgreSQL
-
-↓
-
-SQL Server (futuro)
+SQLite → PostgreSQL → SQL Server (futuro)
 ```
 
 Sem alterar a regra de negócio.
 
 ---
 
-# Estrutura Recomendada
+# Estrutura
 
 ```text
 src/
-
 app/
-
 components/
-
-features/
-
 lib/
-
 domain/
-
 application/
-
 repositories/
-
-infrastructure/
-
 prisma/
 ```
 
@@ -288,38 +215,21 @@ prisma/
 
 # Organização por Módulos
 
-A aplicação deverá ser organizada por contexto de negócio.
-
-Exemplo:
-
 ```text
 features/
-
-catalogo/
-
-circulacao/
-
-leitores/
-
-inventario/
-
-relatorios/
-
-configuracoes/
+  catalogo/
+  circulacao/
+  leitores/
+  inventario/
+  relatorios/
+  configuracoes/
 ```
-
-Cada módulo conterá:
-
-* componentes;
-* hooks;
-* services;
-* validações.
 
 ---
 
 # Configurações
 
-Todas as regras parametrizáveis deverão ficar centralizadas.
+Todas as regras parametrizáveis ficam centralizadas.
 
 Exemplos:
 
@@ -327,122 +237,37 @@ Exemplos:
 * quantidade máxima;
 * multa;
 * formato do código EX;
-* padrão do tombo;
-* impressão.
-
-Nunca utilizar valores fixos no código.
-
----
-
-# Atualizações
-
-A arquitetura deverá permitir atualização automática.
-
-Fluxo previsto:
-
-```text
-Nova versão
-
-↓
-
-Download
-
-↓
-
-Atualização
-
-↓
-
-Reinício
-```
-
-Sem perda de dados.
+* padrão do tombo.
 
 ---
 
 # Backup
 
-O banco deverá permanecer totalmente separado da aplicação.
+O banco permanece separado da aplicação.
 
-Estrutura sugerida:
+Estrutura:
 
 ```text
-VIVA Biblioteca/
-
-biblioteca.db
-
-config.json
-
-backups/
-
-logs/
+storage/
+  database/
+    biblioteca.db
+    backups/
 ```
-
-A reinstalação do sistema nunca deverá apagar o banco.
 
 ---
 
 # Impressão
 
-A aplicação deverá utilizar recursos nativos do sistema operacional.
-
-Exemplos:
-
-* etiquetas;
-* relatórios;
-* carteirinhas;
-* código de barras.
-
-Sem depender do navegador.
-
----
-
-# Leitores de Código de Barras
-
-Os leitores serão tratados como dispositivos de entrada.
-
-Fluxo:
-
-```text
-Cursor
-
-↓
-
-Scanner
-
-↓
-
-EX000321
-
-↓
-
-Enter
-
-↓
-
-Localizar exemplar
-```
-
-Nenhuma configuração especial deverá ser necessária.
+A aplicação utiliza recursos nativos do navegador (window.print, PDF).
 
 ---
 
 # Evolução para Cliente-Servidor
 
-Caso uma biblioteca utilize vários computadores, a arquitetura deverá permitir substituir o SQLite por PostgreSQL.
-
-Nesse cenário:
+Para múltiplos computadores, substituir SQLite por PostgreSQL:
 
 ```text
-Electron
-
-↓
-
-API
-
-↓
-
-PostgreSQL
+Navegador → Next.js → API → PostgreSQL
 ```
 
 Sem alterações na camada de domínio.
@@ -451,29 +276,11 @@ Sem alterações na camada de domínio.
 
 # Evolução para Cloud
 
-A mesma arquitetura permitirá disponibilizar o sistema na Web.
-
 ```text
-Navegador
-
-↓
-
-Next.js
-
-↓
-
-Application
-
-↓
-
-Repositories
-
-↓
-
-PostgreSQL
+Navegador → Next.js → Application → Repositories → PostgreSQL
 ```
 
-A lógica permanecerá exatamente a mesma.
+A lógica permanece exatamente a mesma.
 
 ---
 
@@ -481,92 +288,40 @@ A lógica permanecerá exatamente a mesma.
 
 ## RA-001
 
-Nenhuma regra de negócio poderá existir em componentes React.
-
----
+Nenhuma regra de negócio em componentes React.
 
 ## RA-002
 
-Nenhuma página acessará diretamente o banco.
-
----
+Nenhuma página acessa diretamente o banco.
 
 ## RA-003
 
-Toda persistência deverá passar pelos Repositories.
-
----
+Toda persistência passa pelos Repositories.
 
 ## RA-004
 
-O Domínio nunca dependerá da Interface.
-
----
+O Domínio nunca depende da Interface.
 
 ## RA-005
 
-A Interface poderá ser substituída sem alterar o Domínio.
-
----
+A Interface pode ser substituída sem alterar o Domínio.
 
 ## RA-006
 
-SQLite será a persistência padrão.
-
-A arquitetura deverá permitir troca futura do banco.
-
----
+SQLite é a persistência padrão. A arquitetura permite troca futura do banco.
 
 ## RA-007
 
-Toda funcionalidade deverá ser implementada pensando primeiro no Domínio.
-
-A interface será apenas uma representação dessa lógica.
+Toda funcionalidade é implementada pensando primeiro no Domínio.
 
 ---
 
-# Benefícios
+# Histórico de Decisões
 
-Esta arquitetura proporciona:
-
-* manutenção simplificada;
-* alta escalabilidade;
-* reutilização de código;
-* facilidade de testes;
-* suporte a múltiplas plataformas;
-* evolução para ambientes corporativos.
-
----
-
-# Roadmap Técnico
-
-A arquitetura suporta três modalidades oficiais.
-
-### VIVA Biblioteca Local
-
-* Electron
-* SQLite
-* Uso individual
-
----
-
-### VIVA Biblioteca Rede
-
-* Electron
-* PostgreSQL
-* Servidor local
-* Múltiplos computadores
-
----
-
-### VIVA Biblioteca Cloud
-
-* Navegador
-* PostgreSQL
-* Acesso remoto
-* Multiunidade
-
-Todas compartilham o mesmo domínio e as mesmas regras de negócio.
+| Data       | Decisão                                              |
+|------------|------------------------------------------------------|
+| 24/06/2026 | Electron + Next.js como stack desktop principal      |
+| 28/06/2026 | VPS-002: Electron removido; Next.js puro como stack  |
 
 ---
 
@@ -578,4 +333,6 @@ Todas compartilham o mesmo domínio e as mesmas regras de negócio.
 * **ADR-004** — Estratégia de Importação do Acervo
 * **ADR-005** — Codificação de Exemplares
 
-Este documento estabelece oficialmente a arquitetura técnica do VIVA Biblioteca e define que o sistema será desenvolvido com **Domínio independente da tecnologia**, tendo o **Desktop (Electron)** como principal forma de distribuição, preservando a possibilidade de evolução para ambientes em rede e em nuvem sem reescrita da lógica de negócio.
+Este documento estabelece a arquitetura técnica do VIVA Biblioteca como aplicação **Next.js pura**,
+com **Domínio independente da tecnologia**, preservando a possibilidade de evolução para ambientes
+em rede e em nuvem sem reescrita da lógica de negócio.
