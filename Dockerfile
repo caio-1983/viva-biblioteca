@@ -81,6 +81,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pgpass              
 # Schema, migrations e seed — usados pelo serviço biblioteca-migrate
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
+# Configuração do Prisma 7 (datasource URL para migrate deploy)
+COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
+
+# dotenv — importado por prisma.config.ts; pode não estar no trace standalone
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/dotenv ./node_modules/dotenv
+
 # Diretórios de persistência (exports/imports montados como volume em produção)
 RUN mkdir -p storage/exports storage/imports && \
     chown -R nextjs:nodejs storage
