@@ -202,3 +202,48 @@
     @apply text-sm font-medium text-slate-700 leading-none;
   }
 }
+
+/* ─── VIVA Print — Label sheet output ─────────────────────────────────────── */
+/*
+ * Strategy: make every element invisible; then restore visibility only for
+ * the element marked [data-print-target] and all its descendants.
+ * The print target is forced to display:block (it lives inside a Tailwind
+ * `hidden` div on screen) and anchored to the page origin so the sheet
+ * occupies the full page without any extra margins.
+ *
+ * The .viva-print-preview-scaler transform is reset so the LabelSheet inside
+ * PrintPreview does NOT get scaled on paper — it uses its real mm values.
+ */
+@media print {
+  /* 1. Silence every node */
+  body * {
+    visibility: hidden;
+  }
+
+  /* 2. Restore the print target and its subtree */
+  [data-print-target],
+  [data-print-target] * {
+    visibility: visible;
+  }
+
+  /* 3. Place the target at the top-left origin, force display */
+  [data-print-target] {
+    display: block !important;  /* overrides Tailwind `hidden` (display:none) */
+    position: fixed;
+    inset: 0;
+  }
+
+  /* 4. Neutralise the preview scale transform — labels print at real mm size */
+  .viva-print-preview-scaler {
+    transform: none !important;
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  /* 5. Page setup — Letter, no browser margins (model margins are built in) */
+  @page {
+    size: letter portrait;
+    margin: 0;
+  }
+}

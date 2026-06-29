@@ -22,6 +22,7 @@ import { Drawer }             from '@/components/ui/drawer'
 import { ConfirmDialog }      from '@/components/ui/confirm-dialog'
 import { Skeleton }           from '@/components/ui/loading-state'
 import { useToast }           from '@/components/ui/toast'
+import { LabelPrintingSection } from '@/components/admin/label-printing-section'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -863,6 +864,17 @@ export function AdminWorkspace() {
             </div>
           ))}
         </div>
+      </SectionCard>
+
+      {/* ── 8. ETIQUETAS ── */}
+      <SectionCard
+        id="etiquetas"
+        icon={<Tag className="size-4" />}
+        title="Etiquetas"
+        description="Impressão de etiquetas para lombadas, exemplares e identificação"
+        badge="ativo"
+      >
+        <LabelPrintingSection />
       </SectionCard>
 
       {/* ── Overlays ── */}
