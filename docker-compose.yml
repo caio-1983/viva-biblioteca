@@ -17,20 +17,6 @@ services:
       timeout: 5s
       retries: 5
 
-  biblioteca-migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: migrate
-    container_name: viva-biblioteca-migrate
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      NODE_ENV: production
-      DATABASE_URL: "postgresql://biblioteca:biblioteca@postgres:5432/biblioteca"
-    restart: "no"
-
   biblioteca:
     build:
       context: .
