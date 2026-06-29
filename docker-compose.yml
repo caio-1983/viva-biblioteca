@@ -30,11 +30,7 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: "postgresql://biblioteca:biblioteca@postgres:5432/biblioteca"
-    command: >
-      sh -c "
-        node node_modules/prisma/bin/prisma.js migrate deploy &&
-        node prisma/seed-init.js
-      "
+    command: sh -c "prisma migrate deploy && node prisma/seed-init.js"
     restart: "no"
 
   biblioteca:

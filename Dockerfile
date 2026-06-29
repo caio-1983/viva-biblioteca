@@ -55,6 +55,10 @@ ENV NODE_ENV=production \
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
+# Prisma CLI instalado globalmente — cria /usr/local/bin/prisma
+# Usado exclusivamente pelo serviço biblioteca-migrate (migrate deploy + seed)
+RUN npm install -g prisma@7.8.0
+
 # Saída standalone do Next.js (inclui node_modules rastreados)
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
@@ -63,9 +67,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Cliente Prisma gerado (WASM) — não incluso no trace standalone
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 
-# Prisma CLI + engines — usados exclusivamente pelo serviço biblioteca-migrate
+# Pacotes @prisma em runtime — adapter-pg e client usados pela aplicação
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma  ./node_modules/prisma
 
 # Driver pg — usado por prisma/seed-init.js no serviço biblioteca-migrate
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg                   ./node_modules/pg

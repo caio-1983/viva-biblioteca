@@ -13,14 +13,14 @@ sobrescreve esse comando para executar migrations.
 
 ## Fluxo de deploy
 
-```
+```text
 docker compose build
 
          ↓
 
 docker compose run --rm biblioteca-migrate
-  ├── npx prisma migrate deploy   (aplica migrations pendentes)
-  └── node prisma/seed-init.js    (garante registros obrigatórios)
+  ├── prisma migrate deploy      (aplica migrations pendentes)
+  └── node prisma/seed-init.js   (garante registros obrigatórios)
 
          ↓
 
@@ -85,7 +85,7 @@ Mantenha backups regulares do volume `postgres_data` antes de deploys com schema
 Dentro do container em execução:
 
 ```bash
-docker compose exec biblioteca node node_modules/prisma/bin/prisma.js migrate deploy
+docker compose exec biblioteca prisma migrate deploy
 ```
 
 Ou via serviço dedicado (reinicia o container temporário):
@@ -112,7 +112,7 @@ prisma migrate deploy → seed-init.js.
 ## Referência
 
 | Comando | Descrição |
-|---------|-----------|
+| --- | --- |
 | `docker compose build` | Gera imagem `viva-biblioteca:latest` |
 | `docker compose run --rm biblioteca-migrate` | Executa migrations + seed |
 | `docker compose up -d biblioteca` | Inicia a aplicação |
