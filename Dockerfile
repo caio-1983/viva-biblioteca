@@ -77,9 +77,20 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-protocol         
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-types                     ./node_modules/pg-types
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pgpass                       ./node_modules/pgpass
 
+# Schema Prisma e migrations (necessários para prisma migrate deploy na inicialização)
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+
+# Prisma CLI — inclui o migration engine WASM; necessário para rodar migrate deploy
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma      ./node_modules/prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+
 # Diretórios de persistência (exports/imports montados como volume em produção)
 RUN mkdir -p storage/exports storage/imports && \
     chown -R nextjs:nodejs storage
+
+# Entrypoint: executa migrate deploy antes de iniciar a aplicação
+COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x docker-entrypoint.sh
 
 USER nextjs
 
@@ -88,4 +99,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:3000/api/health || exit 1
 
-CMD ["node", "server.js"]
+CMD ["./docker-entrypoint.sh"]

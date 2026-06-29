@@ -195,7 +195,7 @@ function ImportDrawer({ open, onClose }: { open: boolean; onClose: () => void })
       open={open}
       onClose={onClose}
       title="Importar CSV"
-      description="Colunas esperadas: TÍTULO; Autor; Editora; ISBN; Ano; Assunto; Tombo; Classificação"
+      description="Colunas esperadas: TÍTULO; Subtítulo; Autor; Edição; Ano; Editora; ISBN; Classificação; Notação do Autor; Assunto1; Assunto2; Assunto3; Tombo; Observação"
       width="md"
       footer={
         result ? (
@@ -629,7 +629,7 @@ export function AdminWorkspace() {
               <div>
                 <p className="text-sm font-medium text-slate-700">Importar CSV / Planilha</p>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Colunas: TÍTULO; Autor; Editora; ISBN; Ano; Assunto; Tombo; Classificação
+                  Colunas: TÍTULO; Subtítulo; Autor; Edição; Ano; Editora; ISBN; Classificação; Notação do Autor; Assunto1; Assunto2; Assunto3; Tombo; Observação
                 </p>
               </div>
             </div>
