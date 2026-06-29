@@ -59,30 +59,23 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Cliente Prisma gerado (WASM query compiler — sem engine Rust necessário)
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma                      ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client               ./node_modules/@prisma/client
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client-runtime-utils ./node_modules/@prisma/client-runtime-utils
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/adapter-pg           ./node_modules/@prisma/adapter-pg
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/driver-adapter-utils ./node_modules/@prisma/driver-adapter-utils
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/debug                ./node_modules/@prisma/debug
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/config               ./node_modules/@prisma/config
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/engines-version      ./node_modules/@prisma/engines-version
-
-# Driver PostgreSQL (pure JS — explicitado para garantir inclusão no standalone)
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg                           ./node_modules/pg
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-connection-string         ./node_modules/pg-connection-string
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-pool                      ./node_modules/pg-pool
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-protocol                  ./node_modules/pg-protocol
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-types                     ./node_modules/pg-types
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pgpass                       ./node_modules/pgpass
-
-# Schema Prisma e migrations (necessários para prisma migrate deploy na inicialização)
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-
-# Prisma CLI — inclui o migration engine WASM; necessário para rodar migrate deploy
+# Prisma: cliente WASM gerado + escopo @prisma completo (inclui @prisma/engines
+# e demais pacotes internos exigidos pelo CLI) + CLI para migrate deploy no entrypoint
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma     ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma     ./node_modules/@prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma      ./node_modules/prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+
+# Driver PostgreSQL — necessário para o seed (seed-init.js usa pg diretamente)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg                   ./node_modules/pg
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-connection-string ./node_modules/pg-connection-string
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-pool              ./node_modules/pg-pool
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-protocol          ./node_modules/pg-protocol
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-types             ./node_modules/pg-types
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pgpass               ./node_modules/pgpass
+
+# Schema, migrations e seed de inicialização
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
 # Diretórios de persistência (exports/imports montados como volume em produção)
 RUN mkdir -p storage/exports storage/imports && \
