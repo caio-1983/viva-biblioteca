@@ -2,18 +2,18 @@
 
 # ============================================================
 # Stage 1 — deps
-# Compila módulos nativos (better-sqlite3) e instala deps
+# Instala dependências (pg é pure JS — sem compilação nativa)
 # ============================================================
 FROM node:22-alpine AS deps
 
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
-COPY package*.json ./
-
 # Impede download do binário Electron (não necessário em servidor)
 ENV ELECTRON_SKIP_BINARY_DOWNLOAD=1
+
+COPY package*.json ./
 
 RUN npm ci
 
@@ -59,23 +59,26 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Módulos nativos: Next.js file-tracing não os detecta automaticamente
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/better-sqlite3                  ./node_modules/better-sqlite3
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/bindings                        ./node_modules/bindings
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/file-uri-to-path               ./node_modules/file-uri-to-path
+# Cliente Prisma gerado (WASM query compiler — sem engine Rust necessário)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma                      ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client               ./node_modules/@prisma/client
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client-runtime-utils ./node_modules/@prisma/client-runtime-utils
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/adapter-pg           ./node_modules/@prisma/adapter-pg
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/driver-adapter-utils ./node_modules/@prisma/driver-adapter-utils
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/debug                ./node_modules/@prisma/debug
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/config               ./node_modules/@prisma/config
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/engines-version      ./node_modules/@prisma/engines-version
 
-# Cliente Prisma gerado (inclui WASM query compiler — sem engine Rust necessário)
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma                        ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client                 ./node_modules/@prisma/client
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client-runtime-utils   ./node_modules/@prisma/client-runtime-utils
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/adapter-better-sqlite3 ./node_modules/@prisma/adapter-better-sqlite3
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/driver-adapter-utils   ./node_modules/@prisma/driver-adapter-utils
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/debug                  ./node_modules/@prisma/debug
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/config                 ./node_modules/@prisma/config
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/engines-version        ./node_modules/@prisma/engines-version
+# Driver PostgreSQL (pure JS — explicitado para garantir inclusão no standalone)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg                           ./node_modules/pg
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-connection-string         ./node_modules/pg-connection-string
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-pool                      ./node_modules/pg-pool
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-protocol                  ./node_modules/pg-protocol
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-types                     ./node_modules/pg-types
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pgpass                       ./node_modules/pgpass
 
-# Diretórios de persistência (montados como volume em produção)
-RUN mkdir -p storage/database storage/backups storage/exports storage/imports && \
+# Diretórios de persistência (exports/imports montados como volume em produção)
+RUN mkdir -p storage/exports storage/imports && \
     chown -R nextjs:nodejs storage
 
 USER nextjs

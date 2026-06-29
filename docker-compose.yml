@@ -1,4 +1,22 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: biblioteca-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: biblioteca
+      POSTGRES_USER: biblioteca
+      POSTGRES_PASSWORD: biblioteca
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U biblioteca -d biblioteca"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   biblioteca:
     build:
       context: .
@@ -6,23 +24,18 @@ services:
       target: runner
     image: viva-biblioteca:latest
     container_name: viva-biblioteca
-
     restart: unless-stopped
-
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "3002:3000"
-
     environment:
       NODE_ENV: production
-      DATABASE_URL: "file:/app/storage/database/biblioteca.db"
+      DATABASE_URL: "postgresql://biblioteca:biblioteca@postgres:5432/biblioteca"
       NEXT_TELEMETRY_DISABLED: "1"
-
     volumes:
       - ./storage:/app/storage
-
-    networks:
-      - biblioteca_net
-
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
@@ -30,6 +43,5 @@ services:
       retries: 3
       start_period: 60s
 
-networks:
-  biblioteca_net:
-    driver: bridge
+volumes:
+  postgres_data:

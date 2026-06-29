@@ -3,13 +3,13 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // ============================================
 // ENUMS DE STATUS (ADR-008)
-// No SQLite, enums são materializados como TEXT; a validação ocorre na
-// camada do Prisma Client e os tipos são gerados como union no TypeScript.
+// No PostgreSQL, enums são tipos nativos do banco; a validação ocorre tanto
+// na camada do banco quanto no Prisma Client.
 // ============================================
 enum StatusExemplar {
   DISPONIVEL
