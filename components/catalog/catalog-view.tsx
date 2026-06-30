@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState, useMemo, memo } from 'react'
+import { useEffect, useState, useMemo, useCallback, memo } from 'react'
 import { useRouter }   from 'next/navigation'
 import Link             from 'next/link'
 import {
   BookOpen, BookMarked, ArrowRight, ChevronLeft, ChevronRight,
-  SlidersHorizontal, ArrowUpDown, X, Plus, Check,
+  SlidersHorizontal, ArrowUpDown, X, Plus, Check, Printer,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -23,6 +23,8 @@ import { Input }            from '@/components/ui/input'
 import { EmptyState }       from '@/components/ui/empty-state'
 import { SkeletonCard }     from '@/components/ui/loading-state'
 import { usePageTitle }     from '@/components/page-context'
+import { LabelPrintDialog } from '@/components/cataloging/label-print-dialog'
+import { BatchLabelPrintDialog } from '@/components/printing/batch-label-print-dialog'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -32,6 +34,7 @@ type ExemplarDTO = {
   isbn: string | null
   tipoPublicacao: string | null
   classificacao: string | null
+  cutter: string | null
   titulo: string
   subtitulo: string | null
   autor: string | null
@@ -50,6 +53,7 @@ type ObraCard = {
   isbn: string | null
   tipoPublicacao: string | null
   classificacao: string | null
+  cutter: string | null
   titulo: string
   subtitulo: string | null
   autor: string | null
@@ -98,9 +102,9 @@ function groupByObra(exemplares: ExemplarDTO[]): ObraCard[] {
     if (!map.has(ex.obraId)) {
       map.set(ex.obraId, {
         obraId: ex.obraId, isbn: ex.isbn, tipoPublicacao: ex.tipoPublicacao,
-        classificacao: ex.classificacao, titulo: ex.titulo, subtitulo: ex.subtitulo,
-        autor: ex.autor, edicao: ex.edicao, editora: ex.editora,
-        anoPublicacao: ex.anoPublicacao, assunto1: ex.assunto1,
+        classificacao: ex.classificacao, cutter: ex.cutter, titulo: ex.titulo,
+        subtitulo: ex.subtitulo, autor: ex.autor, edicao: ex.edicao,
+        editora: ex.editora, anoPublicacao: ex.anoPublicacao, assunto1: ex.assunto1,
         assunto2: ex.assunto2, assunto3: ex.assunto3, colecao: ex.colecao,
         totalExemplares: 0, disponiveis: 0, emprestados: 0,
         reservados: 0, emManutencao: 0, extraviados: 0,
@@ -196,7 +200,14 @@ const CoverPlaceholder = memo(function CoverPlaceholder({ titulo, obraId }: { ti
 
 // ── BookCard ──────────────────────────────────────────────────────────────────
 
-const BookCard = memo(function BookCard({ obra }: { obra: ObraCard }) {
+const BookCard = memo(function BookCard({
+  obra, onPrint, onSelect, selected,
+}: {
+  obra: ObraCard
+  onPrint: (obra: ObraCard) => void
+  onSelect: (obraId: number) => void
+  selected: boolean
+}) {
   const router  = useRouter()
   const status  = deriveStatus(obra)
   const assuntos = [obra.assunto1, obra.assunto2, obra.assunto3].filter(Boolean) as string[]
@@ -204,11 +215,30 @@ const BookCard = memo(function BookCard({ obra }: { obra: ObraCard }) {
 
   return (
     <Card
-      className="border border-border/60 bg-white shadow-none hover:shadow-sm hover:border-brand-200 transition-all cursor-pointer group"
+      className={cn(
+        'border bg-white shadow-none hover:shadow-sm transition-all cursor-pointer group',
+        selected
+          ? 'border-brand-400 ring-1 ring-brand-300'
+          : 'border-border/60 hover:border-brand-200',
+      )}
       onClick={() => router.push(href)}
     >
       <CardContent className="p-4">
         <div className="flex gap-3">
+          {/* Checkbox de seleção */}
+          <div
+            className="shrink-0 flex items-start pt-1"
+            onClick={e => { e.stopPropagation(); onSelect(obra.obraId) }}
+          >
+            <input
+              type="checkbox"
+              checked={selected}
+              readOnly
+              className="size-3.5 accent-brand-500 cursor-pointer"
+              aria-label={`Selecionar ${obra.titulo}`}
+            />
+          </div>
+
           {/* Capa */}
           <CoverPlaceholder titulo={obra.titulo} obraId={obra.obraId} />
 
@@ -237,6 +267,11 @@ const BookCard = memo(function BookCard({ obra }: { obra: ObraCard }) {
                         label: 'Abrir obra',
                         icon:  <BookOpen className="size-4" />,
                         onClick: () => router.push(href),
+                      },
+                      {
+                        label:   'Imprimir Etiquetas',
+                        icon:    <Printer className="size-4" />,
+                        onClick: () => onPrint(obra),
                       },
                       {
                         label:    'Novo empréstimo',
@@ -517,15 +552,18 @@ function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
 export function CatalogView() {
   const { setPageInfo } = usePageTitle()
 
-  const [allObras,    setAllObras]    = useState<ObraCard[]>([])
-  const [loading,     setLoading]     = useState(true)
-  const [error,       setError]       = useState(false)
-  const [query,       setQuery]       = useState('')
-  const [filters,     setFilters]     = useState<FilterState>(FILTER_DEFAULT)
-  const [sort,        setSort]        = useState<SortOption>('titulo-asc')
-  const [page,        setPage]        = useState(1)
-  const [perPage,     setPerPage]     = useState<24 | 12 | 48>(24)
-  const [drawerOpen,  setDrawerOpen]  = useState(false)
+  const [allObras,      setAllObras]      = useState<ObraCard[]>([])
+  const [loading,       setLoading]       = useState(true)
+  const [error,         setError]         = useState(false)
+  const [query,         setQuery]         = useState('')
+  const [filters,       setFilters]       = useState<FilterState>(FILTER_DEFAULT)
+  const [sort,          setSort]          = useState<SortOption>('titulo-asc')
+  const [page,          setPage]          = useState(1)
+  const [perPage,       setPerPage]       = useState<24 | 12 | 48>(24)
+  const [drawerOpen,    setDrawerOpen]    = useState(false)
+  const [selectedIds,   setSelectedIds]   = useState<Set<number>>(new Set())
+  const [printTarget,   setPrintTarget]   = useState<ObraCard | null>(null)
+  const [batchPrintOpen,setBatchPrintOpen]= useState(false)
 
   useEffect(() => {
     setPageInfo('Catálogo', 'Acervo de obras e exemplares')
@@ -559,6 +597,33 @@ export function CatalogView() {
 
   // Resetar página ao mudar filtros/busca
   useEffect(() => { setPage(1) }, [query, filters, sort, perPage])
+
+  // ── Handlers de seleção e impressão ────────────────────────────────────
+
+  const handleSelect = useCallback((obraId: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(obraId) ? next.delete(obraId) : next.add(obraId)
+      return next
+    })
+  }, [])
+
+  const handlePrint = useCallback((obra: ObraCard) => {
+    setPrintTarget(obra)
+  }, [])
+
+  const handleBatchPrint = useCallback(() => {
+    setBatchPrintOpen(true)
+  }, [])
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set())
+  }, [])
+
+  const selectedObras = useMemo(
+    () => allObras.filter(o => selectedIds.has(o.obraId)),
+    [allObras, selectedIds],
+  )
 
   // ── Estados não-interativos ─────────────────────────────────────────────
 
@@ -774,10 +839,43 @@ export function CatalogView() {
             </div>
           </div>
 
+          {/* Barra de seleção em lote */}
+          {selectedIds.size > 0 && (
+            <div className="flex items-center justify-between px-4 py-2.5 bg-brand-50 border border-brand-200 rounded-lg">
+              <span className="text-sm text-brand-700 font-medium">
+                {selectedIds.size} obra{selectedIds.size !== 1 ? 's' : ''} selecionada{selectedIds.size !== 1 ? 's' : ''}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={clearSelection}
+                  className="text-brand-600 border-brand-300 hover:bg-brand-100"
+                >
+                  Desmarcar todas
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleBatchPrint}
+                  className="gap-1.5"
+                >
+                  <Printer className="size-3.5" />
+                  Imprimir Etiquetas
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Grid de BookCards */}
           <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
             {paginated.map(obra => (
-              <BookCard key={obra.obraId} obra={obra} />
+              <BookCard
+                key={obra.obraId}
+                obra={obra}
+                onPrint={handlePrint}
+                onSelect={handleSelect}
+                selected={selectedIds.has(obra.obraId)}
+              />
             ))}
           </div>
 
@@ -820,6 +918,37 @@ export function CatalogView() {
         onClose={() => setDrawerOpen(false)}
         filters={filters}
         onApply={setFilters}
+      />
+
+      {/* ── Diálogo de reimpressão (obra única) ─────────────────────────── */}
+      {printTarget && (
+        <LabelPrintDialog
+          open={!!printTarget}
+          onClose={() => setPrintTarget(null)}
+          obra={{
+            titulo:        printTarget.titulo,
+            classificacao: printTarget.classificacao,
+            cutter:        printTarget.cutter,
+            anoPublicacao: printTarget.anoPublicacao,
+            edicao:        printTarget.edicao,
+          }}
+          quantity={printTarget.totalExemplares}
+        />
+      )}
+
+      {/* ── Diálogo de impressão em lote ────────────────────────────────── */}
+      <BatchLabelPrintDialog
+        open={batchPrintOpen}
+        onClose={() => setBatchPrintOpen(false)}
+        obras={selectedObras.map(o => ({
+          obraId:          o.obraId,
+          titulo:          o.titulo,
+          classificacao:   o.classificacao,
+          cutter:          o.cutter,
+          anoPublicacao:   o.anoPublicacao,
+          edicao:          o.edicao,
+          totalExemplares: o.totalExemplares,
+        }))}
       />
     </div>
   )

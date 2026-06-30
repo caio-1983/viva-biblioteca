@@ -189,3 +189,208 @@ describe('obraToLabelData + paginateSlots', () => {
     expect(pages[0].slots).toHaveLength(1)
   })
 })
+
+// ─── LABEL-003: fluxo operacional ─────────────────────────────────────────────
+
+describe('LABEL-003 — Impressão de uma obra (1 exemplar)', () => {
+  it('gera exatamente 1 etiqueta e 1 folha', () => {
+    const result = obraToLabelData(
+      { classificacao: '200', cutter: 'C123b', anoPublicacao: 2020, edicao: '1ª ed.' },
+      1,
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.labels).toHaveLength(1)
+    const pages = paginateSlots(TR6580, result.labels.map((_, i) => ({ index: i, content: null })))
+    expect(pages).toHaveLength(1)
+    expect(pages[0].slots).toHaveLength(1)
+    expect(pages[0].startAt).toBe(0)
+  })
+})
+
+describe('LABEL-003 — Impressão de múltiplas obras (lote)', () => {
+  const obra1 = { classificacao: '100', cutter: 'A100a', anoPublicacao: 2021, edicao: '1ª ed.' }
+  const obra2 = { classificacao: '200', cutter: 'B200b', anoPublicacao: 2022, edicao: '2ª ed.' }
+  const obra3 = { classificacao: '300', cutter: 'C300c', anoPublicacao: 2023, edicao: '3ª ed.' }
+
+  it('processa cada obra individualmente e concatena labels', () => {
+    const r1 = obraToLabelData(obra1, 5)
+    const r2 = obraToLabelData(obra2, 3)
+    const r3 = obraToLabelData(obra3, 2)
+
+    expect(r1.ok).toBe(true)
+    expect(r2.ok).toBe(true)
+    expect(r3.ok).toBe(true)
+
+    if (!r1.ok || !r2.ok || !r3.ok) return
+    const allLabels = [...r1.labels, ...r2.labels, ...r3.labels]
+    expect(allLabels).toHaveLength(10)
+  })
+
+  it('15 labels de 3 obras → 1 folha', () => {
+    const r1 = obraToLabelData(obra1, 5)
+    const r2 = obraToLabelData(obra2, 7)
+    const r3 = obraToLabelData(obra3, 3)
+
+    if (!r1.ok || !r2.ok || !r3.ok) throw new Error('adapter falhou')
+    const labels = [...r1.labels, ...r2.labels, ...r3.labels]
+    const slots: LabelSlot[] = labels.map((_, i) => ({ index: i, content: null }))
+    const pages = paginateSlots(TR6580, slots)
+    expect(pages).toHaveLength(1)
+  })
+})
+
+describe('LABEL-003 — Mais de 30 etiquetas (múltiplas folhas)', () => {
+  const obraGrande = {
+    classificacao: '220.6',
+    cutter: 'B576a',
+    anoPublicacao: 2023,
+    edicao: '2ª ed.',
+  }
+
+  it('31 etiquetas → 2 folhas', () => {
+    const result = obraToLabelData(obraGrande, 31)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const slots: LabelSlot[] = result.labels.map((_, i) => ({ index: i, content: null }))
+    const pages = paginateSlots(TR6580, slots)
+    expect(pages).toHaveLength(2)
+    expect(pages[0].slots).toHaveLength(30)
+    expect(pages[1].slots).toHaveLength(1)
+  })
+
+  it('60 etiquetas → 2 folhas completas', () => {
+    const result = obraToLabelData(obraGrande, 60)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const slots: LabelSlot[] = result.labels.map((_, i) => ({ index: i, content: null }))
+    const pages = paginateSlots(TR6580, slots)
+    expect(pages).toHaveLength(2)
+    expect(pages[0].slots).toHaveLength(30)
+    expect(pages[1].slots).toHaveLength(30)
+  })
+})
+
+describe('LABEL-003 — Posição inicial diferente de 1', () => {
+  const obra = { classificacao: '150', cutter: 'D150d', anoPublicacao: 2019, edicao: '4ª ed.' }
+
+  it('startAt=6 com 10 etiquetas → 1 folha, posição 6 (índice 6)', () => {
+    const result = obraToLabelData(obra, 10)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const slots: LabelSlot[] = result.labels.map((_, i) => ({ index: i, content: null }))
+    const pages = paginateSlots(TR6580, slots, 6)
+    expect(pages).toHaveLength(1)
+    expect(pages[0].startAt).toBe(6)
+    expect(pages[0].slots).toHaveLength(10)
+  })
+
+  it('startAt=25 com 10 etiquetas → 2 folhas (5 na 1ª, 5 na 2ª)', () => {
+    const result = obraToLabelData(obra, 10)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const slots: LabelSlot[] = result.labels.map((_, i) => ({ index: i, content: null }))
+    const pages = paginateSlots(TR6580, slots, 25)
+    expect(pages).toHaveLength(2)
+    expect(pages[0].startAt).toBe(25)
+    expect(pages[0].slots).toHaveLength(5)
+    expect(pages[1].startAt).toBe(0)
+    expect(pages[1].slots).toHaveLength(5)
+  })
+})
+
+describe('LABEL-003 — Obras com campos obrigatórios ausentes', () => {
+  it('obra sem cutter retorna camposFaltando com "Cutter-Sanborn"', () => {
+    const result = obraToLabelData(
+      { classificacao: '200', cutter: null, anoPublicacao: 2020, edicao: '1ª ed.' },
+      3,
+    )
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.camposFaltando).toContain('Cutter-Sanborn')
+    expect(result.camposFaltando).toHaveLength(1)
+  })
+
+  it('obra sem CDD retorna camposFaltando com "CDD"', () => {
+    const result = obraToLabelData(
+      { classificacao: null, cutter: 'A100a', anoPublicacao: 2020, edicao: '1ª ed.' },
+      3,
+    )
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.camposFaltando).toContain('CDD')
+    expect(result.camposFaltando).toHaveLength(1)
+  })
+
+  it('em lote: 2 obras válidas + 1 inválida → 8 etiquetas, 1 erro', () => {
+    const obraValida1 = { classificacao: '100', cutter: 'A100a', anoPublicacao: 2021, edicao: '1ª ed.' }
+    const obraValida2 = { classificacao: '200', cutter: 'B200b', anoPublicacao: 2022, edicao: '2ª ed.' }
+    const obraInvalida = { classificacao: null, cutter: null, anoPublicacao: null, edicao: null }
+
+    const r1 = obraToLabelData(obraValida1, 5)
+    const r2 = obraToLabelData(obraValida2, 3)
+    const r3 = obraToLabelData(obraInvalida, 2)
+
+    expect(r1.ok).toBe(true)
+    expect(r2.ok).toBe(true)
+    expect(r3.ok).toBe(false)
+
+    if (!r1.ok || !r2.ok || r3.ok) return
+    const allLabels = [...r1.labels, ...r2.labels]
+    expect(allLabels).toHaveLength(8)
+    expect(r3.camposFaltando).toHaveLength(4)
+  })
+
+  it('em lote: todas as obras inválidas → 0 etiquetas, todos com erro', () => {
+    const obras = [
+      { classificacao: null, cutter: 'A', anoPublicacao: 2020, edicao: '1ª ed.' },
+      { classificacao: '100', cutter: null, anoPublicacao: 2020, edicao: '1ª ed.' },
+    ]
+    const results = obras.map(o => obraToLabelData(o, 2))
+    expect(results.every(r => !r.ok)).toBe(true)
+    const allLabels: LabelSlot[] = []
+    for (const r of results) {
+      if (r.ok) allLabels.push(...r.labels.map((_, i) => ({ index: i, content: null })))
+    }
+    expect(allLabels).toHaveLength(0)
+  })
+})
+
+describe('LABEL-003 — Resumo da impressão', () => {
+  const obra = { classificacao: '220.6', cutter: 'B576a', anoPublicacao: 2023, edicao: '2ª ed.' }
+
+  it('48 etiquetas → 2 folhas (TR6580: 30 por folha)', () => {
+    const result = obraToLabelData(obra, 48)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const slots: LabelSlot[] = result.labels.map((_, i) => ({ index: i, content: null }))
+    const pages = paginateSlots(TR6580, slots)
+    expect(pages).toHaveLength(2)
+    const totalLabels = pages.reduce((acc, p) => acc + p.slots.length, 0)
+    expect(totalLabels).toBe(48)
+  })
+
+  it('posição inicial 7 (índice 6) com 24 etiquetas → 2 folhas', () => {
+    const result = obraToLabelData(obra, 24)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const slots: LabelSlot[] = result.labels.map((_, i) => ({ index: i, content: null }))
+    // startAt=6 → posição 7 na UI (1-indexed)
+    const pages = paginateSlots(TR6580, slots, 6)
+    // Folha 1: posições 6..29 = 24 slots disponíveis → 24 labels cabe
+    expect(pages).toHaveLength(1)
+    expect(pages[0].startAt).toBe(6)
+    expect(pages[0].slots).toHaveLength(24)
+  })
+
+  it('posição inicial 7 com 30 etiquetas → 2 folhas', () => {
+    const result = obraToLabelData(obra, 30)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const slots: LabelSlot[] = result.labels.map((_, i) => ({ index: i, content: null }))
+    const pages = paginateSlots(TR6580, slots, 6)
+    expect(pages).toHaveLength(2)
+    expect(pages[0].slots).toHaveLength(24)
+    expect(pages[1].slots).toHaveLength(6)
+  })
+})

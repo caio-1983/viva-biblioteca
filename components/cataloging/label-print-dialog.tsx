@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Printer, AlertTriangle } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { Printer, AlertTriangle, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react'
 
 import { Modal }             from '@/components/ui/modal'
 import { Button }            from '@/components/ui/button'
@@ -28,8 +28,24 @@ export interface LabelPrintDialogProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function LabelPrintDialog({ open, onClose, obra, quantity }: LabelPrintDialogProps) {
-  const [startAt, setStartAt] = useState(0)
+  const [startAt,     setStartAt]     = useState(0)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [status,      setStatus]      = useState<'loading' | 'ready'>('loading')
+
   const model = AVAILABLE_MODELS[0]
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (!open) return
+    setStatus('loading')
+    setCurrentPage(0)
+    setStartAt(0)
+    const t = setTimeout(() => setStatus('ready'), 180)
+    return () => clearTimeout(t)
+  }, [open])
+
+  // Reset page when startAt changes
+  useEffect(() => { setCurrentPage(0) }, [startAt])
 
   const adapterResult = useMemo(
     () => obraToLabelData(obra, quantity),
@@ -46,9 +62,9 @@ export function LabelPrintDialog({ open, onClose, obra, quantity }: LabelPrintDi
     return paginateSlots(model, slots, startAt)
   }, [adapterResult, startAt, model])
 
-  const firstPage = pages[0] ?? null
-  const labelCount = quantity
-  const pageCount  = pages.length
+  const totalPages  = pages.length
+  const activePage  = pages[currentPage] ?? null
+  const labelCount  = adapterResult.ok ? quantity : 0
   const description = obra.titulo
     ? `${labelCount} etiqueta${labelCount !== 1 ? 's' : ''} — ${obra.titulo}`
     : `${labelCount} etiqueta${labelCount !== 1 ? 's' : ''}`
@@ -72,7 +88,7 @@ export function LabelPrintDialog({ open, onClose, obra, quantity }: LabelPrintDi
         </div>
       }
     >
-      <div className="space-y-5">
+      <div className="space-y-4">
 
         {/* ── Erro de validação ── */}
         {!adapterResult.ok && (
@@ -94,48 +110,105 @@ export function LabelPrintDialog({ open, onClose, obra, quantity }: LabelPrintDi
           </div>
         )}
 
-        {/* ── Controles + Preview ── */}
-        {adapterResult.ok && firstPage && (
-          <div className="flex flex-col lg:flex-row gap-5">
-
-            {/* Controles: posição + resumo */}
-            <div className="space-y-5 lg:w-44 shrink-0">
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2.5">
-                  Posição inicial
-                </p>
-                <PositionSelector model={model} value={startAt} onChange={setStartAt} />
-              </div>
-
-              <div className="pt-3 border-t border-border/40 space-y-1">
-                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">Resumo</p>
-                <p className="text-xs text-slate-600">
-                  <span className="font-medium">{labelCount}</span>{' '}
-                  etiqueta{labelCount !== 1 ? 's' : ''}
-                </p>
-                <p className="text-xs text-slate-400">
-                  {pageCount} folha{pageCount !== 1 ? 's' : ''}
-                </p>
-              </div>
-            </div>
-
-            {/* Preview — primeira folha com escalonamento */}
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide text-center mb-2">
-                Pré-visualização — {model.paper.name} · Folha 1 de {pageCount}
-              </p>
-              <div className="border border-border/60 rounded-lg overflow-hidden bg-slate-100 p-2">
-                <PrintPreview model={model}>
-                  <LabelSheet
-                    model={model}
-                    slots={firstPage.slots}
-                    startAt={firstPage.startAt}
-                    outlined
-                  />
-                </PrintPreview>
-              </div>
-            </div>
+        {/* ── Estado de carregamento ── */}
+        {adapterResult.ok && status === 'loading' && (
+          <div className="flex items-center justify-center py-10 text-slate-400 text-sm gap-2">
+            <span className="inline-block size-3.5 rounded-full border-2 border-slate-300 border-t-brand-500 animate-spin" />
+            Gerando etiquetas...
           </div>
+        )}
+
+        {/* ── Conteúdo pronto ── */}
+        {adapterResult.ok && status === 'ready' && (
+          <>
+            {/* Status — pronto para impressão */}
+            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg">
+              <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+              <p className="text-sm text-emerald-700">
+                <span className="font-semibold">{labelCount} etiqueta{labelCount !== 1 ? 's' : ''} preparada{labelCount !== 1 ? 's' : ''}.</span>
+                {' '}Pronto para impressão.
+              </p>
+            </div>
+
+            <div className="flex flex-col lg:flex-row gap-5">
+
+              {/* ── Painel lateral: posição + resumo ── */}
+              <div className="space-y-5 lg:w-44 shrink-0">
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2.5">
+                    Posição inicial
+                  </p>
+                  <PositionSelector model={model} value={startAt} onChange={setStartAt} />
+                </div>
+
+                {/* Resumo da impressão */}
+                <div className="pt-3 border-t border-border/40">
+                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-2">Resumo</p>
+                  <dl className="space-y-1.5">
+                    <div className="flex justify-between items-baseline gap-2">
+                      <dt className="text-xs text-slate-400 shrink-0">Modelo</dt>
+                      <dd className="text-xs font-medium text-slate-700 text-right">{model.name}</dd>
+                    </div>
+                    <div className="flex justify-between items-baseline gap-2">
+                      <dt className="text-xs text-slate-400 shrink-0">Folhas</dt>
+                      <dd className="text-xs font-medium text-slate-700">{totalPages}</dd>
+                    </div>
+                    <div className="flex justify-between items-baseline gap-2">
+                      <dt className="text-xs text-slate-400 shrink-0">Etiquetas</dt>
+                      <dd className="text-xs font-medium text-slate-700">{labelCount}</dd>
+                    </div>
+                    <div className="flex justify-between items-baseline gap-2">
+                      <dt className="text-xs text-slate-400 shrink-0">Posição inicial</dt>
+                      <dd className="text-xs font-medium text-slate-700">{startAt + 1}</dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
+
+              {/* ── Preview ── */}
+              <div className="flex-1 min-w-0">
+                {/* Header do preview com navegação */}
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wide">
+                    {model.paper.name} · Folha {currentPage + 1} de {totalPages}
+                  </p>
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                        disabled={currentPage === 0}
+                        className="flex items-center justify-center size-6 rounded border border-border/60 text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        aria-label="Folha anterior"
+                      >
+                        <ChevronLeft className="size-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                        disabled={currentPage === totalPages - 1}
+                        className="flex items-center justify-center size-6 rounded border border-border/60 text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        aria-label="Próxima folha"
+                      >
+                        <ChevronRight className="size-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="border border-border/60 rounded-lg overflow-hidden bg-slate-100 p-2">
+                  {activePage && (
+                    <PrintPreview model={model}>
+                      <LabelSheet
+                        model={model}
+                        slots={activePage.slots}
+                        startAt={activePage.startAt}
+                        outlined
+                      />
+                    </PrintPreview>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
         )}
 
         {/*

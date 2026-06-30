@@ -7,7 +7,7 @@ import { usePageTitle } from '@/components/page-context'
 import {
   ArrowLeft, Plus, Pencil, BookOpen, BookMarked, Archive,
   CheckCircle, Clock, Wrench, Search, AlertTriangle,
-  ExternalLink, RefreshCw, Undo2, Printer, Tag,
+  ExternalLink, RefreshCw, Undo2, Printer,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -831,14 +831,13 @@ function AddExemplarDrawer({ open, onClose, obra, onSaved }: {
   const [saving,           setSaving]           = useState(false)
   const [error,            setError]            = useState<string | null>(null)
   const [saved,            setSaved]            = useState(false)
-  const [printNow,         setPrintNow]         = useState(false)
   const [showPrintDialog,  setShowPrintDialog]  = useState(false)
 
   useEffect(() => {
     if (open) {
       setTombo(''); setCodigoBarras(''); setLocalizacao('')
       setEstadoFisico(''); setObservacao(''); setError(null)
-      setSaved(false); setPrintNow(false); setShowPrintDialog(false)
+      setSaved(false); setShowPrintDialog(false)
     }
   }, [open])
 
@@ -870,14 +869,6 @@ function AddExemplarDrawer({ open, onClose, obra, onSaved }: {
     }
   }
 
-  function handleConcluir() {
-    if (printNow) {
-      setShowPrintDialog(true)
-    } else {
-      onClose()
-    }
-  }
-
   return (
     <>
     <Drawer
@@ -888,12 +879,15 @@ function AddExemplarDrawer({ open, onClose, obra, onSaved }: {
       width="sm"
       footer={
         saved ? (
-          <Button onClick={handleConcluir} className="gap-1.5 w-full">
-            {printNow
-              ? <><Printer className="size-3.5" /> Continuar para impressão</>
-              : 'Concluir'
-            }
-          </Button>
+          <div className="flex gap-2 w-full">
+            <Button variant="outline" onClick={onClose} className="flex-1">
+              Agora não
+            </Button>
+            <Button onClick={() => setShowPrintDialog(true)} className="flex-1 gap-1.5">
+              <Printer className="size-3.5" />
+              Visualizar Etiquetas
+            </Button>
+          </div>
         ) : (
           <>
             <Button variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
@@ -910,25 +904,17 @@ function AddExemplarDrawer({ open, onClose, obra, onSaved }: {
         {/* ── Estado de sucesso ── */}
         {saved ? (
           <div className="space-y-4">
-            <div className="flex flex-col items-center text-center space-y-2 py-4">
+            <div className="flex flex-col items-center text-center space-y-3 py-4">
               <div className="size-10 rounded-full bg-emerald-50 flex items-center justify-center">
                 <CheckCircle className="size-5 text-emerald-500" />
               </div>
-              <p className="text-sm font-semibold text-slate-800">Exemplar adicionado com sucesso.</p>
-            </div>
-
-            <label className="flex items-start gap-3 p-3 border border-border/60 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors select-none">
-              <input
-                type="checkbox"
-                checked={printNow}
-                onChange={e => setPrintNow(e.target.checked)}
-                className="mt-0.5 accent-brand-500"
-              />
-              <div className="flex items-center gap-2">
-                <Tag className="size-4 text-slate-400 shrink-0" />
-                <span className="text-sm text-slate-700">Imprimir etiqueta agora</span>
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Cadastro concluído com sucesso.</p>
+                <p className="text-xs text-slate-400 mt-1">Foram cadastrados:</p>
+                <p className="text-xl font-bold text-slate-800 mt-1">1 exemplar</p>
               </div>
-            </label>
+              <p className="text-sm text-slate-500">Deseja imprimir as etiquetas agora?</p>
+            </div>
           </div>
         ) : (
           <>

@@ -7,7 +7,7 @@ import Link from 'next/link'
 import {
   Search, BookOpen, Plus, ArrowLeft, ArrowRight, CheckCircle2,
   AlertTriangle, Upload, Barcode, Wand2, Loader2, ChevronRight,
-  FileSpreadsheet, Database, BookMarked, ExternalLink, Printer, Tag,
+  FileSpreadsheet, Database, BookMarked, ExternalLink, Printer,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -444,7 +444,6 @@ export function CatalogingWorkspace() {
   const [saveErr,  setSaveErr]  = useState<string | null>(null)
   const [addTarget,       setAddTarget]       = useState<ObraCard | null>(null)
   const [savedObraId,     setSavedObraId]     = useState<number | null>(null)
-  const [printNow,        setPrintNow]        = useState(false)
   const [showPrintDialog, setShowPrintDialog] = useState(false)
 
   // Detect query type
@@ -539,20 +538,11 @@ export function CatalogingWorkspace() {
       const created = await res.json()
       const obraId: number = created.obraId ?? created.obra?.id ?? created.id
       setSavedObraId(obraId)
-      setPrintNow(false)
       setPhase('success')
     } catch (e) {
       setSaveErr(e instanceof Error ? e.message : 'Erro ao salvar')
     } finally {
       setSaving(false)
-    }
-  }
-
-  function handleConcluir() {
-    if (printNow) {
-      setShowPrintDialog(true)
-    } else {
-      router.push(`/acervo/obra/${savedObraId}`)
     }
   }
 
@@ -692,35 +682,30 @@ export function CatalogingWorkspace() {
             <Card className="border border-border/60 bg-white shadow-none">
               <CardContent className="p-6 space-y-6">
                 {/* Confirmação */}
-                <div className="flex flex-col items-center text-center space-y-2">
+                <div className="flex flex-col items-center text-center space-y-3">
                   <div className="size-12 rounded-full bg-emerald-50 flex items-center justify-center">
                     <CheckCircle2 className="size-6 text-emerald-500" />
                   </div>
-                  <h3 className="text-base font-semibold text-slate-800">Cadastro realizado com sucesso.</h3>
-                  <p className="text-sm text-slate-500">Foi cadastrado 1 exemplar.</p>
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-800">Cadastro concluído com sucesso.</h3>
+                    <p className="text-sm text-slate-400 mt-1">Foram cadastrados:</p>
+                    <p className="text-2xl font-bold text-slate-800 mt-1">1 exemplar</p>
+                  </div>
+                  <p className="text-sm text-slate-500">Deseja imprimir as etiquetas agora?</p>
                 </div>
 
-                {/* Opção de impressão */}
-                <label className="flex items-start gap-3 p-3 border border-border/60 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors select-none">
-                  <input
-                    type="checkbox"
-                    checked={printNow}
-                    onChange={e => setPrintNow(e.target.checked)}
-                    className="mt-0.5 accent-brand-500"
-                  />
-                  <div className="flex items-center gap-2">
-                    <Tag className="size-4 text-slate-400 shrink-0" />
-                    <span className="text-sm text-slate-700">Imprimir etiquetas agora</span>
-                  </div>
-                </label>
-
-                {/* Ação */}
-                <div className="flex justify-end pt-1 border-t border-border/40">
-                  <Button onClick={handleConcluir} className="gap-1.5">
-                    {printNow
-                      ? <><Printer className="size-3.5" /> Continuar para impressão</>
-                      : <><ExternalLink className="size-3.5" /> Concluir</>
-                    }
+                {/* Ações */}
+                <div className="flex items-center justify-center gap-3 pt-1 border-t border-border/40">
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/acervo/obra/${savedObraId}`)}
+                    className="gap-1.5"
+                  >
+                    Agora não
+                  </Button>
+                  <Button onClick={() => setShowPrintDialog(true)} className="gap-1.5">
+                    <Printer className="size-3.5" />
+                    Visualizar Etiquetas
                   </Button>
                 </div>
               </CardContent>

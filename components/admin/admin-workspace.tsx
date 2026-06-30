@@ -7,7 +7,7 @@ import {
   Settings, Upload, Users, Tag, HardDrive, ClipboardList, Plug,
   Save, RotateCcw, CheckCircle2, AlertTriangle, Loader2, FileText,
   Clock, Database, Barcode, Globe, Zap, BookOpen, Search as SearchIcon,
-  ChevronRight, X, Plus, Download,
+  ChevronRight, X, Plus, Download, Hash, SlidersHorizontal,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -141,6 +141,51 @@ function ComingSoonItem({ icon, label, description }: {
       </div>
       <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded shrink-0">Em breve</span>
     </div>
+  )
+}
+
+// ─── FeatureCard — clicável ou "em breve" ─────────────────────────────────────
+
+function FeatureCard({
+  icon, title, description, available, onClick,
+}: {
+  icon: React.ReactNode
+  title: string
+  description: string
+  available: boolean
+  onClick?: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={available ? onClick : undefined}
+      className={cn(
+        'group flex flex-col gap-3 w-full p-4 rounded-xl border text-left transition-all duration-150',
+        available
+          ? 'border-border/60 bg-white hover:border-brand-300 hover:shadow-sm cursor-pointer hover:bg-brand-50/40'
+          : 'border-border/40 bg-slate-50/50 opacity-60 cursor-not-allowed'
+      )}
+    >
+      <div className={cn(
+        'size-10 rounded-lg border flex items-center justify-center shrink-0 transition-colors',
+        available
+          ? 'bg-brand-50 border-brand-200 text-brand-500 group-hover:bg-brand-100'
+          : 'bg-white border-border/60 text-slate-400'
+      )}>
+        {icon}
+      </div>
+      <div className="space-y-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-semibold text-slate-800">{title}</span>
+          {!available && (
+            <span className="text-[10px] bg-white border border-border text-slate-400 px-1.5 py-0.5 rounded">
+              Em breve
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-slate-400 leading-snug">{description}</p>
+      </div>
+    </button>
   )
 }
 
@@ -359,6 +404,7 @@ export function AdminWorkspace() {
   // Backup confirm
   const [backupConfirmOpen, setBackupConfirmOpen] = useState(false)
   const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false)
+  const [lombadaOpen, setLombadaOpen] = useState(false)
 
   // Load config
   const loadConfig = useCallback(async () => {
@@ -712,36 +758,48 @@ export function AdminWorkspace() {
         </div>
       </SectionCard>
 
-      {/* ── 4. ETIQUETAS ── */}
+      {/* ── 4. ETIQUETAS E IMPRESSÃO ── */}
       <SectionCard
-        id="etiquetas"
+        id="etiquetas-impressao"
         icon={<Tag className="size-4" />}
         title="Etiquetas e Impressão"
-        description="Modelos de etiquetas para exemplares e códigos de barras"
-        badge="em-breve"
+        description="Central de impressão de etiquetas para o acervo"
+        badge="ativo"
       >
-        <div className="space-y-0 -my-1">
-          <ComingSoonItem
-            icon={<Barcode className="size-3.5" />}
-            label="Etiqueta com código EX"
-            description="Etiqueta padrão com código do exemplar (EX000001)"
-          />
-          <ComingSoonItem
-            icon={<Barcode className="size-3.5" />}
-            label="Etiqueta de código de barras"
-            description="Impressão de código de barras por exemplar"
-          />
-          <ComingSoonItem
-            icon={<FileText className="size-3.5" />}
-            label="Etiqueta de tombo"
-            description="Etiqueta patrimonial com número de tombo"
-          />
-          <div className="py-3 opacity-60">
-            <p className="text-xs text-slate-400">
-              Futuras funcionalidades: seleção de impressora, configuração de tamanho, impressão em lote,
-              modelos personalizados.
-            </p>
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 gap-3">
+            <FeatureCard
+              icon={<BookOpen className="size-5" />}
+              title="Lombadas"
+              description="Impressão de etiquetas de classificação (CDD, Cutter, Ano e Edição)."
+              available
+              onClick={() => setLombadaOpen(v => !v)}
+            />
+            <FeatureCard
+              icon={<Barcode className="size-5" />}
+              title="Exemplares"
+              description="Etiquetas do exemplar (EX, código de barras e QR Code)."
+              available={false}
+            />
+            <FeatureCard
+              icon={<Hash className="size-5" />}
+              title="Patrimônio"
+              description="Etiquetas patrimoniais com número de tombo."
+              available={false}
+            />
+            <FeatureCard
+              icon={<SlidersHorizontal className="size-5" />}
+              title="Modelos"
+              description="Configuração de layouts de impressão."
+              available={false}
+            />
           </div>
+
+          {lombadaOpen && (
+            <div className="border-t border-border/40 pt-5">
+              <LabelPrintingSection />
+            </div>
+          )}
         </div>
       </SectionCard>
 
@@ -864,17 +922,6 @@ export function AdminWorkspace() {
             </div>
           ))}
         </div>
-      </SectionCard>
-
-      {/* ── 8. ETIQUETAS ── */}
-      <SectionCard
-        id="etiquetas"
-        icon={<Tag className="size-4" />}
-        title="Etiquetas"
-        description="Impressão de etiquetas para lombadas, exemplares e identificação"
-        badge="ativo"
-      >
-        <LabelPrintingSection />
       </SectionCard>
 
       {/* ── Overlays ── */}
