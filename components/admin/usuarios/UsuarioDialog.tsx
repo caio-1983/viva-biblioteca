@@ -18,6 +18,8 @@ export interface SystemUser {
   login: string
   email: string
   ativo: boolean
+  ultimoLogin: string | null
+  createdAt: string
   roles: Array<{ id: string; nome: string }>
 }
 
