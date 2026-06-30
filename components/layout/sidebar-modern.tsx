@@ -90,7 +90,7 @@ export function SidebarModern({ open, onClose }: SidebarProps) {
         {/* Logo */}
         <div className="flex items-center justify-center border-b border-slate-200 px-4 py-6 bg-white">
           <Image
-            src="/logo.png"
+            src="/logo-viva.png"
             alt="Viva Biblioteca"
             width={200}
             height={100}
@@ -136,7 +136,7 @@ export function SidebarModern({ open, onClose }: SidebarProps) {
         <div className="flex items-center justify-between border-b border-slate-700/50 px-4 py-4">
           <div className="flex-1">
             <Image
-              src="/logo.png"
+              src="/logo-viva.png"
               alt="Viva Biblioteca"
               width={200}
               height={100}

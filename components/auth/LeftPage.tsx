@@ -64,7 +64,7 @@ export function LeftPage() {
       >
         {/* Logo */}
         <img
-          src="/logo.png"
+          src="/logo-viva.png"
           alt="VIVA Biblioteca"
           style={{
             width: "min(220px, 72%)",
@@ -72,6 +72,23 @@ export function LeftPage() {
             objectFit: "contain",
           }}
         />
+
+        {/* Subtitle */}
+        <p
+          style={{
+            width: "min(220px, 72%)",
+            margin: "-0.6rem 0 0",
+            textAlign: "justify",
+            textAlignLast: "justify",
+            fontFamily: "var(--font-display, sans-serif)",
+            fontSize: "0.9rem",
+            fontWeight: 700,
+            letterSpacing: "1.07em",
+            color: "#0D2340",
+          }}
+        >
+          BIBLIOTECA
+        </p>
 
         {/* Divider */}
         <div
@@ -95,40 +112,6 @@ export function LeftPage() {
           <div style={{ flex: 1, height: "1px", background: "rgba(201,169,110,0.3)" }} />
         </div>
 
-        {/* Quote block */}
-        <blockquote
-          style={{
-            margin: 0,
-            textAlign: "center",
-            maxWidth: "280px",
-          }}
-        >
-          <p
-            style={{
-              fontFamily: "var(--font-serif, Georgia, serif)",
-              fontSize: "clamp(0.76rem, 1.4vw, 0.9rem)",
-              fontStyle: "italic",
-              color: "#4A3F32",
-              lineHeight: 1.75,
-              margin: "0 0 0.7rem",
-            }}
-          >
-            "O paraíso, sob alguma forma, deve ser uma espécie de biblioteca."
-          </p>
-          <cite
-            style={{
-              display: "block",
-              fontFamily: "var(--font-sans, sans-serif)",
-              fontSize: "0.58rem",
-              letterSpacing: "0.22em",
-              color: "#C9A96E",
-              fontWeight: 600,
-              fontStyle: "normal",
-            }}
-          >
-            — JORGE LUIS BORGES
-          </cite>
-        </blockquote>
       </div>
 
       {/* Page number — bottom center */}

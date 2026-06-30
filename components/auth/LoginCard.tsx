@@ -77,18 +77,7 @@ export function LoginCard({ visible = true }: LoginCardProps) {
       >
         {/* Header */}
         <motion.div variants={staggerItem} style={{ marginBottom: "2rem" }}>
-          <p
-            style={{
-              color: "#C9A96E",
-              fontSize: "0.58rem",
-              letterSpacing: "0.38em",
-              fontWeight: 700,
-              margin: "0 0 0.65rem",
-              fontFamily: "var(--font-sans, sans-serif)",
-            }}
-          >
-            ACESSO AO SISTEMA
-          </p>
+
           <h2
             style={{
               color: "#1a1810",
@@ -100,7 +89,7 @@ export function LoginCard({ visible = true }: LoginCardProps) {
               lineHeight: 1.2,
             }}
           >
-            Bem-vindo de volta
+            Bem-vindo
           </h2>
           <p
             style={{
@@ -111,7 +100,7 @@ export function LoginCard({ visible = true }: LoginCardProps) {
               fontFamily: "var(--font-sans, sans-serif)",
             }}
           >
-            Entre com suas credenciais para acessar a biblioteca.
+            Informe seus dados de acesso.
           </p>
         </motion.div>
 

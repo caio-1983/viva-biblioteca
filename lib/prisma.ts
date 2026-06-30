@@ -10,7 +10,8 @@ export function getPrisma(): PrismaClient {
     throw new Error('Cannot use Prisma in browser')
   }
 
-  const url = process.env.DATABASE_URL ?? 'postgresql://biblioteca:biblioteca@localhost:5432/biblioteca'
+  const url = process.env.DATABASE_URL
+  if (!url) throw new Error('Missing required environment variable: DATABASE_URL')
   const adapter = new PrismaPg(url)
 
   prismaInstance = new PrismaClient({ adapter })

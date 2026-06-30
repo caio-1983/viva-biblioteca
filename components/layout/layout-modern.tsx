@@ -53,7 +53,7 @@ export function LayoutModern({ children }: LayoutModernProps) {
           {/* Coluna central — branding empilhado */}
           <div className="flex flex-col items-center justify-center gap-0.5">
             <Image
-              src="/logo.png"
+              src="/logo-viva.png"
               alt="VIVA"
               width={52}
               height={26}

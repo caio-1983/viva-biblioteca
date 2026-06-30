@@ -51,7 +51,7 @@ function run(cmd: string, label: string): boolean {
 
 step('Validando variáveis de ambiente')
 
-const REQUIRED: string[] = ['DATABASE_URL', 'NODE_ENV', 'PORT', 'APP_URL', 'STORAGE_PATH']
+const REQUIRED: string[] = ['DATABASE_URL', 'NODE_ENV', 'PORT', 'APP_URL', 'STORAGE_PATH', 'AUTH_URL', 'AUTH_SECRET']
 let envErrors = 0
 
 for (const v of REQUIRED) {

@@ -1300,7 +1300,12 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
 
       {/* ══ 1. CABEÇALHO ════════════════════════════════════════════════════ */}
       <div className="space-y-5">
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => router.back()}>
+            <ArrowLeft className="size-3.5" />
+            Voltar
+          </Button>
+          <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => loadData()}>
             <RefreshCw className="size-3.5" />
             <span className="hidden sm:inline">Atualizar</span>
@@ -1329,6 +1334,7 @@ export function ObraWorkspace({ obraId }: { obraId: number }) {
               },
             ]}
           />
+          </div>
         </div>
 
         {/* Ficha bibliográfica */}

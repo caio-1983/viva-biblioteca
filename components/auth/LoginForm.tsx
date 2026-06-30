@@ -76,10 +76,10 @@ export function LoginForm({ visible = true }: LoginFormProps) {
       <div style={{ width: "100%", maxWidth: "320px" }}>
         {/* Heading */}
         <motion.div variants={staggerItemVariants} style={{ marginBottom: "clamp(1.4rem, 3.5vh, 2rem)" }}>
-          <p style={eyebrowStyle}>ACESSO AO SISTEMA</p>
-          <h1 style={headingStyle}>Bem-vindo de volta</h1>
+
+          <h1 style={headingStyle}>Bem-vindo</h1>
           <p style={subStyle}>
-            Entre com suas credenciais para acessar a biblioteca.
+            Informe seus dados de acesso.
           </p>
         </motion.div>
 
