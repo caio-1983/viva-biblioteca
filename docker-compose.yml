@@ -17,6 +17,23 @@ services:
       timeout: 5s
       retries: 5
 
+  # Serviço efêmero: aplica migrations e seeds, depois encerra (exit 0).
+  # A aplicação só sobe após este serviço completar com sucesso.
+  migrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrate
+    image: viva-biblioteca-migrator:latest
+    container_name: biblioteca-migrator
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://biblioteca:biblioteca@postgres:5432/biblioteca"
+
   biblioteca:
     build:
       context: .
@@ -28,6 +45,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
     ports:
       - "3002:3000"
     environment:
