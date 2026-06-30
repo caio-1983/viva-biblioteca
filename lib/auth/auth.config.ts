@@ -1,5 +1,9 @@
 import type { NextAuthConfig } from "next-auth"
 
+// Prefixos de rota que não exigem autenticação.
+// Acrescente aqui novos endpoints públicos de infraestrutura.
+const PUBLIC_API_PREFIXES = ["/api/auth", "/api/health"]
+
 export const authConfig: NextAuthConfig = {
   pages: {
     signIn: "/login",
@@ -10,8 +14,8 @@ export const authConfig: NextAuthConfig = {
       const isLoggedIn = !!auth?.user
       const { pathname } = nextUrl
 
-      // NextAuth gerencia suas próprias rotas
-      if (pathname.startsWith("/api/auth")) return true
+      // Rotas públicas de infraestrutura e NextAuth
+      if (PUBLIC_API_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return true
 
       // Página de login: usuários autenticados são redirecionados para o dashboard
       if (pathname.startsWith("/login")) {

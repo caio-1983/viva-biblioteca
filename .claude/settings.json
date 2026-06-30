@@ -12,7 +12,9 @@
       "PowerShell(\"V Todos os processos antigos parados\")",
       "PowerShell(Remove-Item \"c:\\\\IntegraSolutions\\\\projetos\\\\viva-biblioteca\\\\prisma\\\\migrations\\\\auth_rbac.sql\" -Confirm:$false)",
       "PowerShell(Get-ChildItem \"c:\\\\IntegraSolutions\\\\projetos\\\\viva-biblioteca\\\\node_modules\" -Directory | Where-Object { $_.Name -match '^pg' -or $_.Name -match '^postgres-' -or $_.Name -eq 'pgpass' } | Select-Object -ExpandProperty Name | Sort-Object)",
-      "PowerShell(\\(Get-Content \"c:\\\\IntegraSolutions\\\\projetos\\\\viva-biblioteca\\\\node_modules\\\\split2\\\\package.json\" | ConvertFrom-Json\\).name)"
+      "PowerShell(\\(Get-Content \"c:\\\\IntegraSolutions\\\\projetos\\\\viva-biblioteca\\\\node_modules\\\\split2\\\\package.json\" | ConvertFrom-Json\\).name)",
+      "PowerShell(npm install 2>&1)",
+      "PowerShell(npm run build 2>&1)"
     ]
   }
 }
