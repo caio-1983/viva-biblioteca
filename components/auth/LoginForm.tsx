@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import type { CSSProperties } from "react";
 import {
   staggerRevealVariants,
@@ -13,20 +15,21 @@ import {
 } from "@/lib/animations/bookOpening";
 
 const schema = z.object({
-  email:    z.string().email("E-mail inválido"),
-  password: z.string().min(1, "Informe a senha"),
+  identifier: z.string().min(1, "Informe seu usuário ou e-mail"),
+  password:   z.string().min(1, "Informe a senha"),
 });
 
 type FormData = z.infer<typeof schema>;
 
 interface LoginFormProps {
-  /** Controls the stagger entrance animation */
   visible?: boolean;
 }
 
 export function LoginForm({ visible = true }: LoginFormProps) {
-  const [showPwd, setShowPwd] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [showPwd, setShowPwd]     = useState(false);
+  const [loading, setLoading]     = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const router = useRouter();
 
   const {
     register,
@@ -34,11 +37,24 @@ export function LoginForm({ visible = true }: LoginFormProps) {
     formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
-  const onSubmit = async (_data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     setLoading(true);
-    // TODO: connect to auth endpoint
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoading(false);
+    setAuthError(null);
+
+    const result = await signIn("credentials", {
+      identifier: data.identifier,
+      password:   data.password,
+      redirect:   false,
+    });
+
+    if (result?.error) {
+      setAuthError("Usuário ou senha inválidos.");
+      setLoading(false);
+      return;
+    }
+
+    router.push("/");
+    router.refresh();
   };
 
   return (
@@ -68,17 +84,17 @@ export function LoginForm({ visible = true }: LoginFormProps) {
         </motion.div>
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
-          {/* E-mail */}
+          {/* Usuário ou e-mail */}
           <motion.div variants={staggerItemVariants} style={{ marginBottom: "1.05rem" }}>
-            <label style={labelStyle} htmlFor="ve-email">
-              E-mail
+            <label style={labelStyle} htmlFor="ve-identifier">
+              Usuário ou e-mail
             </label>
             <input
-              {...register("email")}
-              id="ve-email"
-              type="email"
-              placeholder="seu@email.com"
-              autoComplete="email"
+              {...register("identifier")}
+              id="ve-identifier"
+              type="text"
+              placeholder="admin ou seu@email.com"
+              autoComplete="username"
               style={inputStyle}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = "#C9A96E";
@@ -91,7 +107,7 @@ export function LoginForm({ visible = true }: LoginFormProps) {
                 e.currentTarget.style.background  = "rgba(255,255,255,0.55)";
               }}
             />
-            {errors.email && <p style={errorStyle}>{errors.email.message}</p>}
+            {errors.identifier && <p style={errorStyle}>{errors.identifier.message}</p>}
           </motion.div>
 
           {/* Senha */}
@@ -133,12 +149,23 @@ export function LoginForm({ visible = true }: LoginFormProps) {
           {/* Esqueci a senha */}
           <motion.div
             variants={staggerItemVariants}
-            style={{ textAlign: "right", marginBottom: "1.7rem" }}
+            style={{ textAlign: "right", marginBottom: authError ? "0.9rem" : "1.7rem" }}
           >
             <a href="#" style={forgotStyle}>
               Esqueci minha senha
             </a>
           </motion.div>
+
+          {/* Mensagem de erro de autenticação */}
+          {authError && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              style={authErrorBoxStyle}
+            >
+              {authError}
+            </motion.div>
+          )}
 
           {/* Botão */}
           <motion.div variants={staggerItemVariants}>
@@ -246,6 +273,18 @@ const errorStyle: CSSProperties = {
   marginTop: "0.28rem",
   marginBottom: 0,
   fontFamily: "var(--font-sans, sans-serif)",
+};
+
+const authErrorBoxStyle: CSSProperties = {
+  background: "rgba(184,92,56,0.08)",
+  border: "1px solid rgba(184,92,56,0.22)",
+  borderRadius: "7px",
+  color: "#B85C38",
+  fontSize: "0.78rem",
+  padding: "0.55rem 0.8rem",
+  marginBottom: "1rem",
+  fontFamily: "var(--font-sans, sans-serif)",
+  textAlign: "center",
 };
 
 const eyeButtonStyle: CSSProperties = {

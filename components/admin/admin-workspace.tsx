@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-import { PageHeader }         from '@/components/ui/page-header'
+import { UsuariosWorkspace }  from '@/components/admin/usuarios/UsuariosWorkspace'
 import { Section }            from '@/components/ui/section'
 import { Card, CardContent }  from '@/components/ui/card'
 import { Button }             from '@/components/ui/button'
@@ -519,18 +519,6 @@ export function AdminWorkspace() {
   return (
     <div className="space-y-6 pb-16 max-w-3xl">
 
-      <PageHeader
-        title="Administração"
-        description="Configurações globais, importações, usuários e integrações do sistema"
-        breadcrumb={
-          <nav className="flex items-center gap-1.5 text-xs text-slate-400">
-            <Link href="/" className="hover:text-slate-600 transition-colors">Dashboard</Link>
-            <span aria-hidden>›</span>
-            <span className="text-slate-600">Administração</span>
-          </nav>
-        }
-      />
-
       {/* ── 1. CONFIGURAÇÕES GERAIS ── */}
       <SectionCard
         id="config-gerais"
@@ -798,43 +786,9 @@ export function AdminWorkspace() {
         icon={<Users className="size-4" />}
         title="Usuários do Sistema"
         description="Perfis, permissões e controle de acesso ao sistema"
-        badge="em-breve"
+        badge="ativo"
       >
-        <div className="space-y-0 -my-1">
-          {/* Perfis previstos */}
-          <div className="py-4 border-b border-border/40">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Perfis previstos</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {[
-                { label: 'Administrador', desc: 'Acesso total'          },
-                { label: 'Bibliotecário', desc: 'Catalogação e circulação' },
-                { label: 'Auxiliar',      desc: 'Circulação somente'    },
-                { label: 'Consulta',      desc: 'Somente leitura'       },
-              ].map(({ label, desc }) => (
-                <div key={label} className="p-3 rounded-lg bg-slate-50 border border-border/60">
-                  <p className="text-xs font-semibold text-slate-700">{label}</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">{desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="py-4 space-y-2 opacity-60">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-600">Gerenciamento de usuários do sistema</p>
-              <Button size="sm" variant="outline" disabled className="gap-1.5">
-                <Plus className="size-3.5" />
-                Novo usuário
-              </Button>
-            </div>
-            <p className="text-xs text-slate-400">
-              Requer implementação de autenticação e tabela de usuários do sistema (distinta dos leitores).
-            </p>
-            <code className="block text-[11px] bg-slate-100 text-slate-500 px-2 py-1.5 rounded font-mono">
-              GET /api/sistema/usuarios · POST /api/sistema/usuarios · PUT /api/sistema/usuarios/:id
-            </code>
-          </div>
-        </div>
+        <UsuariosWorkspace />
       </SectionCard>
 
       {/* ── 4. ETIQUETAS ── */}
