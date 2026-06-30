@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Printer, AlertTriangle, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react'
 
 import { Modal }             from '@/components/ui/modal'
@@ -31,6 +32,9 @@ export function LabelPrintDialog({ open, onClose, obra, quantity }: LabelPrintDi
   const [startAt,     setStartAt]     = useState(0)
   const [currentPage, setCurrentPage] = useState(0)
   const [status,      setStatus]      = useState<'loading' | 'ready'>('loading')
+  const [isMounted,   setIsMounted]   = useState(false)
+
+  useEffect(() => { setIsMounted(true) }, [])
 
   const model = AVAILABLE_MODELS[0]
 
@@ -69,7 +73,17 @@ export function LabelPrintDialog({ open, onClose, obra, quantity }: LabelPrintDi
     ? `${labelCount} etiqueta${labelCount !== 1 ? 's' : ''} — ${obra.titulo}`
     : `${labelCount} etiqueta${labelCount !== 1 ? 's' : ''}`
 
+  const handlePrint = useCallback(() => {
+    const target = document.querySelector('[data-print-target="catalog-labels"]')
+    if (!target) {
+      console.error('[LabelPrintDialog] data-print-target ausente no DOM — impressão cancelada')
+      return
+    }
+    window.print()
+  }, [])
+
   return (
+    <>
     <Modal
       open={open}
       onClose={onClose}
@@ -80,7 +94,7 @@ export function LabelPrintDialog({ open, onClose, obra, quantity }: LabelPrintDi
         <div className="flex items-center justify-between w-full gap-3">
           <Button variant="outline" onClick={onClose}>Fechar</Button>
           {adapterResult.ok && (
-            <Button onClick={() => window.print()} className="gap-2">
+            <Button onClick={handlePrint} className="gap-2">
               <Printer className="size-3.5" />
               Imprimir
             </Button>
@@ -211,30 +225,34 @@ export function LabelPrintDialog({ open, onClose, obra, quantity }: LabelPrintDi
           </>
         )}
 
-        {/*
-          ── Alvo de impressão ──────────────────────────────────────────────────
-          Oculto na tela; o @media print em globals.css torna este elemento
-          o único visível, posicionado em fixed; inset: 0 no tamanho real (mm).
-          Todas as folhas são renderizadas aqui para impressão em lote.
-        */}
-        {adapterResult.ok && (
-          <div
-            className="hidden"
-            aria-hidden="true"
-            data-print-target="catalog-labels"
-          >
-            {pages.map((page, pi) => (
-              <LabelSheet
-                key={pi}
-                model={model}
-                slots={page.slots}
-                startAt={page.startAt}
-              />
-            ))}
-          </div>
-        )}
-
       </div>
     </Modal>
+
+    {/*
+      ── Alvo de impressão — portal direto em document.body ──────────────────
+      Renderizado FORA do Modal para não ser removido quando o Radix UI
+      desmontar o DialogPortal. Posicionado off-screen (não display:none)
+      para garantir captura correta pelo @media print.
+      Condicionado nos dados (adapterResult.ok), não em `open`, para
+      sobreviver a qualquer evento de fechamento do dialog durante a impressão.
+    */}
+    {isMounted && adapterResult.ok && pages.length > 0 && createPortal(
+      <div
+        style={{ position: 'fixed', left: '-9999px', top: 0 }}
+        aria-hidden="true"
+        data-print-target="catalog-labels"
+      >
+        {pages.map((page, pi) => (
+          <LabelSheet
+            key={pi}
+            model={model}
+            slots={page.slots}
+            startAt={page.startAt}
+          />
+        ))}
+      </div>,
+      document.body,
+    )}
+    </>
   )
 }

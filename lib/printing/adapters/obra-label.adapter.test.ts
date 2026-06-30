@@ -92,21 +92,21 @@ describe('obraToLabelData', () => {
       expect(result.camposFaltando).toContain('Cutter-Sanborn')
     })
 
-    it('retorna ok:false quando Ano está ausente', () => {
+    it('retorna ok:true quando Ano está ausente (campo opcional)', () => {
       const result = obraToLabelData({ ...obraCompleta, anoPublicacao: null }, 1)
-      expect(result.ok).toBe(false)
-      if (result.ok) return
-      expect(result.camposFaltando).toContain('Ano de publicação')
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.labels[0].ano).toBe('')
     })
 
-    it('retorna ok:false quando Edição está ausente', () => {
+    it('retorna ok:true quando Edição está ausente (campo opcional)', () => {
       const result = obraToLabelData({ ...obraCompleta, edicao: null }, 1)
-      expect(result.ok).toBe(false)
-      if (result.ok) return
-      expect(result.camposFaltando).toContain('Edição')
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.labels[0].edicao).toBe('')
     })
 
-    it('lista todos os campos faltando de uma vez', () => {
+    it('lista apenas CDD e Cutter como campos bloqueantes', () => {
       const result = obraToLabelData(
         { classificacao: null, cutter: null, anoPublicacao: null, edicao: null },
         1,
@@ -115,12 +115,10 @@ describe('obraToLabelData', () => {
       if (result.ok) return
       expect(result.camposFaltando).toContain('CDD')
       expect(result.camposFaltando).toContain('Cutter-Sanborn')
-      expect(result.camposFaltando).toContain('Ano de publicação')
-      expect(result.camposFaltando).toContain('Edição')
-      expect(result.camposFaltando).toHaveLength(4)
+      expect(result.camposFaltando).toHaveLength(2)
     })
 
-    it('retorna ok:false quando campos são undefined', () => {
+    it('retorna ok:false quando campos são undefined (CDD e Cutter)', () => {
       const result = obraToLabelData(
         { classificacao: undefined, cutter: undefined, anoPublicacao: undefined, edicao: undefined },
         1,
@@ -338,7 +336,7 @@ describe('LABEL-003 — Obras com campos obrigatórios ausentes', () => {
     if (!r1.ok || !r2.ok || r3.ok) return
     const allLabels = [...r1.labels, ...r2.labels]
     expect(allLabels).toHaveLength(8)
-    expect(r3.camposFaltando).toHaveLength(4)
+    expect(r3.camposFaltando).toHaveLength(2)
   })
 
   it('em lote: todas as obras inválidas → 0 etiquetas, todos com erro', () => {

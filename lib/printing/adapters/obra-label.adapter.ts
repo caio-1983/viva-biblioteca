@@ -30,16 +30,14 @@ export function obraToLabelData(obra: ObraParaEtiqueta, quantity: number): Adapt
 
   if (!obra.classificacao?.trim()) camposFaltando.push('CDD')
   if (!obra.cutter?.trim())        camposFaltando.push('Cutter-Sanborn')
-  if (obra.anoPublicacao == null)  camposFaltando.push('Ano de publicação')
-  if (!obra.edicao?.trim())        camposFaltando.push('Edição')
 
   if (camposFaltando.length > 0) return { ok: false, camposFaltando }
 
   const base: LabelData = {
     cdd:    obra.classificacao!.trim(),
     cutter: obra.cutter!.trim(),
-    ano:    obra.anoPublicacao!,
-    edicao: obra.edicao!.trim(),
+    ano:    obra.anoPublicacao ?? '',
+    edicao: obra.edicao?.trim() ?? '',
   }
 
   return {

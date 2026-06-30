@@ -76,21 +76,23 @@ type StatusFilter = 'TODOS' | 'DISPONIVEL' | 'EMPRESTADO' | 'RESERVADO' | 'INDIS
 type SortOption   = 'titulo-asc' | 'titulo-desc' | 'autor' | 'recentes'
 
 type FilterState = {
-  status:  StatusFilter
-  assunto: string
-  editora: string
-  cdd:     string
-  anoMin:  string
-  anoMax:  string
+  status:     StatusFilter
+  assunto:    string
+  editora:    string
+  cdd:        string
+  anoMin:     string
+  anoMax:     string
+  printReady: boolean
 }
 
 const FILTER_DEFAULT: FilterState = {
-  status:  'TODOS',
-  assunto: '',
-  editora: '',
-  cdd:     '',
-  anoMin:  '',
-  anoMax:  '',
+  status:     'TODOS',
+  assunto:    '',
+  editora:    '',
+  cdd:        '',
+  anoMin:     '',
+  anoMax:     '',
+  printReady: false,
 }
 
 // ── Pure helpers ──────────────────────────────────────────────────────────────
@@ -155,8 +157,9 @@ function applyFilters(obras: ObraCard[], f: FilterState): ObraCard[] {
     }
     if (f.editora && !o.editora?.toLowerCase().includes(f.editora.toLowerCase())) return false
     if (f.cdd     && !o.classificacao?.toLowerCase().includes(f.cdd.toLowerCase())) return false
-    if (f.anoMin  && o.anoPublicacao !== null && o.anoPublicacao < Number(f.anoMin)) return false
-    if (f.anoMax  && o.anoPublicacao !== null && o.anoPublicacao > Number(f.anoMax)) return false
+    if (f.anoMin      && o.anoPublicacao !== null && o.anoPublicacao < Number(f.anoMin)) return false
+    if (f.anoMax      && o.anoPublicacao !== null && o.anoPublicacao > Number(f.anoMax)) return false
+    if (f.printReady  && !isAptaImpressao(o)) return false
     return true
   })
 }
@@ -171,8 +174,13 @@ function sortObras(obras: ObraCard[], sort: SortOption): ObraCard[] {
   return arr
 }
 
+function isAptaImpressao(o: ObraCard): boolean {
+  return !!(o.classificacao?.trim()) && !!(o.cutter?.trim())
+}
+
 function countActiveFilters(f: FilterState): number {
   return (f.status !== 'TODOS' ? 1 : 0) +
+    (f.printReady ? 1 : 0) +
     [f.assunto, f.editora, f.cdd, f.anoMin, f.anoMax].filter(Boolean).length
 }
 
@@ -698,7 +706,7 @@ export function CatalogView() {
 
         {/* Linha de controles */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          {/* Filtros rápidos de status */}
+          {/* Filtros rápidos de status + impressão */}
           <div className="flex items-center gap-1.5 flex-wrap">
             {STATUS_QUICK.map(({ value, label }) => {
               const active = filters.status === value
@@ -718,6 +726,24 @@ export function CatalogView() {
                 </button>
               )
             })}
+
+            {/* Separador visual */}
+            <span className="w-px h-4 bg-border/60 mx-0.5" aria-hidden />
+
+            {/* Filtro: aptas para impressão */}
+            <button
+              type="button"
+              onClick={() => setFilters(f => ({ ...f, printReady: !f.printReady }))}
+              className={cn(
+                'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors',
+                filters.printReady
+                  ? 'bg-brand-500 text-white border-brand-500'
+                  : 'bg-white text-slate-500 border-border hover:border-brand-300 hover:text-brand-600'
+              )}
+            >
+              <Printer className="size-3" />
+              Aptas para impressão
+            </button>
           </div>
 
           {/* Ordenação + filtros avançados */}
@@ -921,20 +947,14 @@ export function CatalogView() {
       />
 
       {/* ── Diálogo de reimpressão (obra única) ─────────────────────────── */}
-      {printTarget && (
-        <LabelPrintDialog
-          open={!!printTarget}
-          onClose={() => setPrintTarget(null)}
-          obra={{
-            titulo:        printTarget.titulo,
-            classificacao: printTarget.classificacao,
-            cutter:        printTarget.cutter,
-            anoPublicacao: printTarget.anoPublicacao,
-            edicao:        printTarget.edicao,
-          }}
-          quantity={printTarget.totalExemplares}
-        />
-      )}
+      {/* Sempre montado (sem wrapper condicional) para o print target portal
+          não ser removido do DOM quando onClose() é chamado durante impressão */}
+      <LabelPrintDialog
+        open={printTarget !== null}
+        onClose={() => setPrintTarget(null)}
+        obra={printTarget ?? { titulo: null, classificacao: null, cutter: null, anoPublicacao: null, edicao: null }}
+        quantity={printTarget?.totalExemplares ?? 0}
+      />
 
       {/* ── Diálogo de impressão em lote ────────────────────────────────── */}
       <BatchLabelPrintDialog
